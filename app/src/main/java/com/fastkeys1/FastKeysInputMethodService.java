@@ -8,6 +8,7 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputConnection;
+import android.view.inputmethod.InputMethodManager;
 import android.view.inputmethod.ExtractedTextRequest;
 import android.os.Handler;
 import java.util.LinkedList;
@@ -76,6 +77,13 @@ public class FastKeysInputMethodService extends InputMethodService {
     @Override public void onStartInputView(android.view.inputmethod.EditorInfo info, boolean restarting) {
         super.onStartInputView(info, restarting);
         if (keyboard != null) keyboard.refreshSuggestions();
+    }
+
+    public void showInputMethodPickerSafe() {
+        try {
+            InputMethodManager imm = (InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);
+            if (imm != null) imm.showInputMethodPicker();
+        } catch (Exception ignored) {}
     }
 
     public void type(String s) {

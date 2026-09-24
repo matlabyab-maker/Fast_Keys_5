@@ -36,7 +36,8 @@ public class FastKeysKeyboardView extends View {
             invalidate();
         }
     };
-    private final String[] suggestions = new String[3];
+    private final String[] suggestions = new String[6];
+    private float suggestionH;
     private static final String[][] WORDS = {
         {"سلام","سلامت","سلامتی"},{"من","منم","منطقه"},{"این","اینجا","اینجانب"},
         {"برای","برنامه","بررسی"},{"کیبورد","کیبوردی","کیبوردها"},{"است","استفاده","استان"},
@@ -384,7 +385,6 @@ public class FastKeysKeyboardView extends View {
     }
 
     private void showEmojiPicker() {
-        final android.view.inputmethod.InputConnection target = service.getCurrentInputConnection();
         final String[] emojis = {
                 "😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃",
                 "😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜",
@@ -408,7 +408,7 @@ public class FastKeysKeyboardView extends View {
             GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
             lp.width = 0; lp.height = dp(52); lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
             lp.setMargins(1,1,1,1); grid.addView(b,lp);
-            b.setOnClickListener(v -> { if (target != null) service.typeTo(target, emoji); });
+            b.setOnClickListener(v -> service.type(emoji));
         }
         scroll.addView(grid);
         LinearLayout root = new LinearLayout(service); root.setOrientation(LinearLayout.VERTICAL);
@@ -677,8 +677,9 @@ public class FastKeysKeyboardView extends View {
         super.onDraw(c);
         float w=getWidth(),h=getHeight();
         gap=dp(3);
-        int rows=7;
-        keyH=(h-gap*(rows+1))/rows;
+        // Six normal key rows plus a half-height suggestion row.
+        keyH=(h-gap*8f)/6.5f;
+        suggestionH=keyH*0.5f;
 
         drawKeyboard(c);
 
@@ -711,11 +712,11 @@ public class FastKeysKeyboardView extends View {
         drawMousePointer(c, gap, y, gap + wt[0] * ((w-gap*(wt.length+1))/wtSum), y + keyH);
 
         y+=keyH+gap;
-        String[] sug={suggestions[0],suggestions[1],suggestions[2]};
-        for(int i=0;i<3;i++)
-            key(c,i*w/3f,y,(i+1)*w/3f,y+keyH,sug[i],BLUE,false);
+        String[] sug=suggestions;
+        for(int i=0;i<6;i++)
+            key(c,i*w/6f+gap/2f,y,(i+1)*w/6f-gap/2f,y+suggestionH,sug[i],BLUE,false);
 
-        y+=keyH+gap;
+        y+=suggestionH+gap;
         float[] w2={.55f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,1.45f};
         String[] sy={"⌃","!\n۱","@\n۲","#\n۳","$\n۴","%\n۵","^\n۶","&\n۷","*\n۸","(\n۹",")\n۰","_\n-","+\n=","⌫"};
         float total2=0; for(float q:w2) total2+=q;
@@ -845,7 +846,7 @@ public class FastKeysKeyboardView extends View {
 
     private void drawArrow(Canvas c,float x,float y,float ww,float hh,String s){
         key(c,x,y,x+ww,y+hh,"",NAVY,true);
-        txt(c,s,x+ww/2,y+hh/2,hh*.55f,NAVY);
+        txt(c,s,x+ww/2,y+hh/2,hh*.55f,BLUE);
     }
 
     private void drawPressGlow(Canvas c){
@@ -908,11 +909,11 @@ public class FastKeysKeyboardView extends View {
         int n=0;
         for(String[] group:WORDS)
             for(String x:group)
-                if(x.startsWith(word)&&!x.equals(word)&&n<3)suggestions[n++]=x;
+                if(x.startsWith(word)&&!x.equals(word)&&n<6)suggestions[n++]=x;
         if(n==0)
             for(String[] group:WORDS)
                 for(String x:group)
-                    if(x.contains(word)&&n<3)suggestions[n++]=x;
+                    if(x.contains(word)&&n<6)suggestions[n++]=x;
         invalidate();
     }
 
@@ -932,11 +933,33 @@ public class FastKeysKeyboardView extends View {
         invalidate();
     }
 
+    private int getRowAt(float y){
+        float t=gap;
+        if(y>=t && y<=t+keyH) return 0;
+        t += keyH + gap;
+        if(y>=t && y<=t+suggestionH) return 1;
+        t += suggestionH + gap;
+        for(int row=2; row<=6; row++){
+            if(y>=t && y<=t+keyH) return row;
+            t += keyH + gap;
+        }
+        return -1;
+    }
+
+    private float rowTop(int row){
+        float t=gap;
+        if(row==0) return t;
+        t += keyH + gap;
+        if(row==1) return t;
+        t += suggestionH + gap;
+        return t + (row-2)*(keyH+gap);
+    }
+
     private void pressRectFor(float x, float y, boolean held){
-        float w=getWidth(); int row=(int)((y-gap)/(keyH+gap)); if(row<0||row>6){clearPressGlowNow();return;}
-        float t=gap+row*(keyH+gap),b=t+keyH,l=gap,r;
+        float w=getWidth(); int row=getRowAt(y); if(row<0||row>6){clearPressGlowNow();return;}
+        float t=rowTop(row),b=t+(row==1?suggestionH:keyH),l=gap,r;
         if(row==0){float[] wt={.55f,1.45f,1.55f,1.05f,1,1,1,1.25f,.55f};float total=0;for(float q:wt)total+=q;float u=(w-gap*(wt.length+1))/total;for(int i=0;i<wt.length;i++){r=l+u*wt[i];if(x>=l&&x<=r){setPressGlow(l,t,r,b,held);return;}l=r+gap;}return;}
-        if(row==1){float cw=w/3f;int i=Math.max(0,Math.min(2,(int)(x/cw)));setPressGlow(i*cw,t,(i+1)*cw,b,held);return;}
+        if(row==1){float cw=w/6f;int i=Math.max(0,Math.min(5,(int)(x/cw)));setPressGlow(i*cw,t,(i+1)*cw,b,held);return;}
         if(row==2){float[] wt={.55f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,1.45f};float total=0;for(float q:wt)total+=q;float u=(w-gap*(wt.length+1))/total;for(int i=0;i<wt.length;i++){r=l+u*wt[i];if(x>=l&&x<=r){setPressGlow(l,t,r,b,held);return;}l=r+gap;}return;}
         if(row==3){float left=keyH+gap,capsW=keyH*.70f,available=w-left-gap,normalW=(available-capsW-gap*14f)/13f,x0=left+gap;if(x>=x0&&x<x0+capsW){setPressGlow(x0,t,x0+capsW,b,held);return;}x0+=capsW+gap;for(int i=0;i<13;i++){if(x>=x0&&x<x0+normalW){setPressGlow(x0,t,x0+normalW,b,held);return;}x0+=normalW+gap;}return;}
         if(row==4 || row==5){
@@ -1020,7 +1043,7 @@ public class FastKeysKeyboardView extends View {
 
     private void handle(float x,float y){
         float w=getWidth();
-        int row=(int)((y-gap)/(keyH+gap));
+        int row=getRowAt(y);
         if(row<0 || row>6) return;
 
         if(row==0){
@@ -1030,14 +1053,15 @@ public class FastKeysKeyboardView extends View {
             for(int i=0;i<wt.length;i++){
                 float r=x0+unit*wt[i];
                 if(x>=x0 && x<r){
-                    if(i==0) service.copyAll();
-                    else if(i==1) service.copyScreen();
-                    else if(i==2) service.paste();
-                    else if(i==3) service.cut();
-                    else if(i==4) service.undo();
-                    else if(i==5) service.redo();
-                    else if(i==6) showClipboardHistory();
-                    else if(i==7) showDrawer();
+                    if(i==0) showMouseControls();
+                    else if(i==1) service.copyAll();
+                    else if(i==2) service.copyScreen();
+                    else if(i==3) service.paste();
+                    else if(i==4) service.cut();
+                    else if(i==5) service.undo();
+                    else if(i==6) service.redo();
+                    else if(i==7) showClipboardHistory();
+                    else if(i==8) showDrawer();
                     return;
                 }
                 x0=r+gap;
@@ -1045,7 +1069,7 @@ public class FastKeysKeyboardView extends View {
             return;
         }
         if(row==1){
-            int i=Math.max(0,Math.min(2,(int)(x/(w/3f))));
+            int i=Math.max(0,Math.min(5,(int)(x/(w/6f))));
             if(!suggestions[i].isEmpty()) service.replaceCurrentWord(suggestions[i]);
             return;
         }
@@ -1108,7 +1132,7 @@ public class FastKeysKeyboardView extends View {
                 float r=x0+unit*bw[i];
                 if(x>=x0 && x<r){
                     if(i==0) showSymbolPicker();
-                    else if(i==1) service.switchInputMethod(null);
+                    else if(i==1) service.showInputMethodPickerSafe();
                     else if(i==2) showEmojiPicker();
                     else if(i==3) service.type(" ");
                     else if(i==4) service.move(KeyEvent.KEYCODE_DPAD_LEFT);
@@ -1122,14 +1146,41 @@ public class FastKeysKeyboardView extends View {
         }
     }
 
+    private void showMouseControls(){
+        LinearLayout root=new LinearLayout(service);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(18,12,18,12);
+        TextView title=new TextView(service);
+        title.setText("نشانگر موس");
+        title.setTextSize(20);
+        title.setGravity(Gravity.CENTER);
+        title.setTextColor(NAVY);
+        root.addView(title,new LinearLayout.LayoutParams(-1,54));
+        GridLayout grid=new GridLayout(service);
+        grid.setColumnCount(3);
+        String[] labels={"↖","↑","↗","←","●","→","↙","↓","↘"};
+        int[] codes={KeyEvent.KEYCODE_DPAD_UP,KeyEvent.KEYCODE_DPAD_UP,KeyEvent.KEYCODE_DPAD_UP,
+                KeyEvent.KEYCODE_DPAD_LEFT,0,KeyEvent.KEYCODE_DPAD_RIGHT,KeyEvent.KEYCODE_DPAD_DOWN,
+                KeyEvent.KEYCODE_DPAD_DOWN,KeyEvent.KEYCODE_DPAD_DOWN};
+        for(int i=0;i<labels.length;i++){
+            Button b=new Button(service); b.setText(labels[i]); b.setTextSize(22); b.setTextColor(BLUE); b.setAllCaps(false);
+            final int code=codes[i];
+            b.setOnClickListener(v->{ if(code!=0) service.move(code); });
+            GridLayout.LayoutParams lp=new GridLayout.LayoutParams();
+            lp.width=0; lp.height=dp(58); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(2,2,2,2);
+            grid.addView(b,lp);
+        }
+        root.addView(grid,new LinearLayout.LayoutParams(-1,dp(190)));
+        new AlertDialog.Builder(service).setView(root).setNegativeButton("بستن",null).show();
+    }
+
     private void showSymbolPicker(){
-        final android.view.inputmethod.InputConnection target = service.getCurrentInputConnection();
         final String[] symbols={"!","@","#","$","%","^","&","*","(",")","-","_","=","+","[","]","{","}","\\","|",";",":",",","<",".",">","/","؟","!#@"};
         GridLayout grid=new GridLayout(service); grid.setColumnCount(5); grid.setPadding(10,10,10,10);
         for(String s:symbols){
             Button b=new Button(service); b.setText(s); b.setTextSize(20); b.setAllCaps(false);
             GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(58); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(2,2,2,2); grid.addView(b,lp);
-            b.setOnClickListener(v->{ if(target!=null) service.typeTo(target, s); });
+            b.setOnClickListener(v -> service.type(s));
         }
         AlertDialog d=new AlertDialog.Builder(service).setTitle("نمادها").setView(grid).setNegativeButton("بستن",null).create(); d.show();
     }
