@@ -106,15 +106,21 @@ public class FastKeysKeyboardView extends View {
     private void showDrawer() {
         final LinearLayout panel = new LinearLayout(service);
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setPadding(24, 18, 24, 18);
+        panel.setPadding(18, 12, 18, 12);
 
         TextView title = new TextView(service);
         title.setText("امکانات");
         title.setTextSize(20);
         title.setTextColor(BLACK);
         title.setGravity(Gravity.CENTER);
-        panel.addView(title, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        panel.addView(title, new LinearLayout.LayoutParams(-1, 54));
+
+        ScrollView scroll = new ScrollView(service);
+        scroll.setFillViewport(true);
+        LinearLayout list = new LinearLayout(service);
+        list.setOrientation(LinearLayout.VERTICAL);
+        scroll.addView(list, new ScrollView.LayoutParams(-1, -2));
+        panel.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
 
         Button transparency = drawerButton("شفافیت کیبورد");
         Button palette = drawerButton("رنگ کیبورد");
@@ -128,68 +134,48 @@ public class FastKeysKeyboardView extends View {
         Button magnifierButton = drawerButton("ذره‌بین");
         Button resize = drawerButton("Resize / Float");
 
-        panel.addView(transparency);
-        panel.addView(palette);
-        panel.addView(emoji);
-        panel.addView(emojiMaker);
-        panel.addView(nastaliq);
-        panel.addView(nastaliqKeyboard);
-        panel.addView(steering);
-        panel.addView(arabic);
-        panel.addView(history);
-        panel.addView(magnifierButton);
-        panel.addView(resize);
+        Button[] buttons={transparency,palette,emoji,emojiMaker,nastaliq,nastaliqKeyboard,steering,arabic,history,magnifierButton,resize};
+        for(Button b:buttons) list.addView(b);
 
         final PopupWindow popup = new PopupWindow(panel,
-                Math.min((int)(getWidth() * 0.92f), 700),
-                WindowManager.LayoutParams.WRAP_CONTENT, true);
+                Math.min((int)(Math.max(320,getWidth()) * 0.94f), 700),
+                Math.min(dp(520), Math.max(dp(260), getHeight() - dp(12))), false);
         popup.setBackgroundDrawable(new ColorDrawable(Color.WHITE));
         popup.setOutsideTouchable(true);
+        popup.setTouchable(true);
+        popup.setFocusable(false); // Do not steal focus from the editor / close the IME.
+        popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED);
+        popup.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING);
         popup.setElevation(8f);
 
-        transparency.setOnClickListener(v -> {
-            popup.dismiss();
-            showTransparency();
-        });
-        palette.setOnClickListener(v -> {
-            popup.dismiss();
-            showColorPalette();
-        });
-        emoji.setOnClickListener(v -> { popup.dismiss(); showEmojiPicker(); });
-        emojiMaker.setOnClickListener(v -> { popup.dismiss(); showEmojiMaker(); });
+        transparency.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showTransparency));
+        palette.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showColorPalette));
+        emoji.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showEmojiPicker));
+        emojiMaker.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showEmojiMaker));
         nastaliq.setOnClickListener(v -> {
             nastaliqEnabled = !nastaliqEnabled;
             service.getSharedPreferences("fast_keys_settings", 0).edit().putBoolean("nastaliq", nastaliqEnabled).apply();
             popup.dismiss(); invalidate();
         });
-        nastaliqKeyboard.setOnClickListener(v -> { popup.dismiss(); showNastaliqKeyboard(); });
-        steering.setOnClickListener(v -> {
-            popup.dismiss();
-            showSteeringWheel();
-        });
-        arabic.setOnClickListener(v -> {
-            popup.dismiss();
-            showArabicHarakat();
-        });
-        history.setOnClickListener(v -> {
-            popup.dismiss();
-            showClipboardHistory();
-        });
+        nastaliqKeyboard.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showNastaliqKeyboard));
+        steering.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showSteeringWheel));
+        arabic.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showArabicHarakat));
+        history.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showClipboardHistory));
         magnifierButton.setOnClickListener(v -> {
             magnifier = !magnifier;
-            magnifierX = -1;
-            magnifierY = -1;
-            popup.dismiss();
-            invalidate();
+            magnifierX = -1; magnifierY = -1;
+            popup.dismiss(); invalidate();
         });
-        resize.setOnClickListener(v -> {
-            popup.dismiss();
-            showResizeFloatInfo();
-        });
+        resize.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showResizeFloatInfo));
 
-        popup.showAtLocation(this, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, 8);
+        popup.showAtLocation(this, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, dp(6));
         drawerOpen = true;
         popup.setOnDismissListener(() -> drawerOpen = false);
+    }
+
+    private void showAndKeepKeyboard(PopupWindow popup, Runnable action) {
+        popup.dismiss();
+        postDelayed(action, 80);
     }
 
     private Button drawerButton(String text) {
@@ -385,6 +371,7 @@ public class FastKeysKeyboardView extends View {
     }
 
     private void showEmojiPicker() {
+        final android.view.inputmethod.InputConnection target = service.getCurrentInputConnection();
         final String[] emojis = {
                 "😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃",
                 "😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜",
@@ -398,24 +385,21 @@ public class FastKeysKeyboardView extends View {
                 "👏","🙌","🙏","🤝","👌","✌️","🤞","🤟","🤘","🤙","👋","💪",
                 "🔥","⭐","✨","🎉","🎊","💯","✅","❌","⚡","🌹","🌸","🌺"
         };
-        ScrollView scroll = new ScrollView(service);
-        GridLayout grid = new GridLayout(service);
-        grid.setColumnCount(6);
-        grid.setPadding(8,8,8,8);
-        for (String emoji : emojis) {
-            Button b = new Button(service);
-            b.setText(emoji); b.setTextSize(24); b.setAllCaps(false);
-            GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
-            lp.width = 0; lp.height = dp(52); lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-            lp.setMargins(1,1,1,1); grid.addView(b,lp);
-            b.setOnClickListener(v -> service.type(emoji));
+        LinearLayout root=new LinearLayout(service); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(8,8,8,8);
+        TextView title=new TextView(service); title.setText("انتخاب Emoji"); title.setTextSize(20); title.setGravity(Gravity.CENTER); title.setTextColor(NAVY);
+        root.addView(title,new LinearLayout.LayoutParams(-1,54));
+        ScrollView scroll=new ScrollView(service); GridLayout grid=new GridLayout(service); grid.setColumnCount(6); grid.setPadding(6,6,6,6);
+        for(String emoji:emojis){
+            Button b=new Button(service); b.setText(emoji); b.setTextSize(24); b.setAllCaps(false);
+            GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(52); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(1,1,1,1); grid.addView(b,lp);
+            b.setOnClickListener(v -> { if(target!=null) service.typeTo(target,emoji); });
         }
-        scroll.addView(grid);
-        LinearLayout root = new LinearLayout(service); root.setOrientation(LinearLayout.VERTICAL);
-        TextView title = new TextView(service); title.setText("انتخاب Emoji"); title.setTextSize(20); title.setGravity(Gravity.CENTER); title.setTextColor(NAVY);
-        root.addView(title,new LinearLayout.LayoutParams(-1,56)); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
-        AlertDialog d = new AlertDialog.Builder(service).setView(root).setNegativeButton("بستن",null).create();
-        d.show();
+        scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
+        Button close=drawerButton("بستن"); root.addView(close,new LinearLayout.LayoutParams(-1,58));
+        final PopupWindow popup=new PopupWindow(root,Math.min((int)(getWidth()*0.96f),720),Math.min(dp(520),Math.max(dp(300),getHeight()-dp(10))),false);
+        popup.setBackgroundDrawable(new ColorDrawable(Color.WHITE)); popup.setTouchable(true); popup.setFocusable(false); popup.setOutsideTouchable(true); popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED); popup.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING); popup.setElevation(10f);
+        close.setOnClickListener(v->popup.dismiss());
+        popup.showAtLocation(this,Gravity.TOP|Gravity.CENTER_HORIZONTAL,0,dp(6));
     }
 
     private void showNastaliqKeyboard() {
@@ -1135,8 +1119,8 @@ public class FastKeysKeyboardView extends View {
                     else if(i==1) service.showInputMethodPickerSafe();
                     else if(i==2) showEmojiPicker();
                     else if(i==3) service.type(" ");
-                    else if(i==4) service.move(KeyEvent.KEYCODE_DPAD_LEFT);
-                    else if(i==5) service.move(KeyEvent.KEYCODE_DPAD_RIGHT);
+                    else if(i==4) service.moveCursorHorizontal(-1);
+                    else if(i==5) service.moveCursorHorizontal(1);
                     else if(i==6) service.move(KeyEvent.KEYCODE_DPAD_UP);
                     else if(i==7) service.move(KeyEvent.KEYCODE_DPAD_DOWN);
                     return;
@@ -1147,31 +1131,32 @@ public class FastKeysKeyboardView extends View {
     }
 
     private void showMouseControls(){
-        LinearLayout root=new LinearLayout(service);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(18,12,18,12);
-        TextView title=new TextView(service);
-        title.setText("نشانگر موس");
-        title.setTextSize(20);
-        title.setGravity(Gravity.CENTER);
-        title.setTextColor(NAVY);
+        LinearLayout root=new LinearLayout(service); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(12,10,12,10);
+        TextView title=new TextView(service); title.setText("نشانگر موس / مکان‌نما"); title.setTextSize(20); title.setGravity(Gravity.CENTER); title.setTextColor(NAVY);
         root.addView(title,new LinearLayout.LayoutParams(-1,54));
-        GridLayout grid=new GridLayout(service);
-        grid.setColumnCount(3);
+        GridLayout grid=new GridLayout(service); grid.setColumnCount(3);
         String[] labels={"↖","↑","↗","←","●","→","↙","↓","↘"};
-        int[] codes={KeyEvent.KEYCODE_DPAD_UP,KeyEvent.KEYCODE_DPAD_UP,KeyEvent.KEYCODE_DPAD_UP,
-                KeyEvent.KEYCODE_DPAD_LEFT,0,KeyEvent.KEYCODE_DPAD_RIGHT,KeyEvent.KEYCODE_DPAD_DOWN,
-                KeyEvent.KEYCODE_DPAD_DOWN,KeyEvent.KEYCODE_DPAD_DOWN};
         for(int i=0;i<labels.length;i++){
-            Button b=new Button(service); b.setText(labels[i]); b.setTextSize(22); b.setTextColor(BLUE); b.setAllCaps(false);
-            final int code=codes[i];
-            b.setOnClickListener(v->{ if(code!=0) service.move(code); });
-            GridLayout.LayoutParams lp=new GridLayout.LayoutParams();
-            lp.width=0; lp.height=dp(58); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(2,2,2,2);
-            grid.addView(b,lp);
+            Button b=new Button(service); b.setText(labels[i]); b.setTextSize(25); b.setTextColor(BLUE); b.setAllCaps(false);
+            final int index=i;
+            b.setOnClickListener(v->{
+                if(index==3) service.moveCursorHorizontal(-1);
+                else if(index==5) service.moveCursorHorizontal(1);
+                else if(index==1) service.move(KeyEvent.KEYCODE_DPAD_UP);
+                else if(index==7) service.move(KeyEvent.KEYCODE_DPAD_DOWN);
+                else if(index==0) { service.move(KeyEvent.KEYCODE_DPAD_UP); service.moveCursorHorizontal(-1); }
+                else if(index==2) { service.move(KeyEvent.KEYCODE_DPAD_UP); service.moveCursorHorizontal(1); }
+                else if(index==6) { service.move(KeyEvent.KEYCODE_DPAD_DOWN); service.moveCursorHorizontal(-1); }
+                else if(index==8) { service.move(KeyEvent.KEYCODE_DPAD_DOWN); service.moveCursorHorizontal(1); }
+            });
+            GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(58); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(2,2,2,2); grid.addView(b,lp);
         }
         root.addView(grid,new LinearLayout.LayoutParams(-1,dp(190)));
-        new AlertDialog.Builder(service).setView(root).setNegativeButton("بستن",null).show();
+        Button close=drawerButton("بستن"); root.addView(close);
+        final PopupWindow popup=new PopupWindow(root,Math.min(dp(340),Math.max(dp(300),getWidth()-dp(20))),dp(330),false);
+        popup.setBackgroundDrawable(new ColorDrawable(Color.WHITE)); popup.setTouchable(true); popup.setFocusable(false); popup.setOutsideTouchable(true); popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED); popup.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING); popup.setElevation(10f);
+        close.setOnClickListener(v->popup.dismiss());
+        popup.showAtLocation(this,Gravity.CENTER,0,0);
     }
 
     private void showSymbolPicker(){

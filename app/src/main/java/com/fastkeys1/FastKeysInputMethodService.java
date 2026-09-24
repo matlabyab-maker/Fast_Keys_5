@@ -147,6 +147,26 @@ public class FastKeysInputMethodService extends InputMethodService {
         if (keyboard != null) keyboard.refreshSuggestions();
     }
 
+    // Reliable text-cursor movement for left/right controls. Sending DPAD events
+    // is not handled consistently by every Android editor, so use setSelection
+    // when absolute cursor positions can be determined.
+    public void moveCursorHorizontal(int direction) {
+        InputConnection ic = getCurrentInputConnection();
+        if (ic == null || (direction != -1 && direction != 1)) return;
+        try {
+            CharSequence before = ic.getTextBeforeCursor(10000, 0);
+            CharSequence after = ic.getTextAfterCursor(10000, 0);
+            int beforeLen = before == null ? 0 : before.length();
+            int afterLen = after == null ? 0 : after.length();
+            int pos = beforeLen;
+            int next = Math.max(0, Math.min(beforeLen + afterLen, pos + direction));
+            ic.setSelection(next, next);
+        } catch (Exception ignored) {
+            move(direction < 0 ? KeyEvent.KEYCODE_DPAD_LEFT : KeyEvent.KEYCODE_DPAD_RIGHT);
+        }
+        if (keyboard != null) keyboard.refreshSuggestions();
+    }
+
     public void copyAll() {
         InputConnection ic = getCurrentInputConnection();
         if (ic == null) return;
