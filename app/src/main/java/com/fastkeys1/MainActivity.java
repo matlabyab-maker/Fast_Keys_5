@@ -3,6 +3,7 @@ package com.fastkeys1;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -18,6 +19,11 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
+        if ("com.fastkeys1.START_MAGNIFIER".equals(getIntent().getAction())) {
+            MediaProjectionManager mpm=(MediaProjectionManager)getSystemService(MEDIA_PROJECTION_SERVICE);
+            if(mpm!=null) startActivityForResult(mpm.createScreenCaptureIntent(), 901);
+            return;
+        }
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(28, 28, 28, 28);
@@ -61,5 +67,18 @@ public class MainActivity extends Activity {
         box.addView(overlay);
 
         setContentView(box);
+    }
+
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode==901){
+            if(resultCode==RESULT_OK && data!=null){
+                Intent i=new Intent(this,ScreenMagnifierService.class);
+                i.putExtra("resultCode",resultCode);
+                i.putExtra("data",data);
+                if(android.os.Build.VERSION.SDK_INT>=26) startForegroundService(i); else startService(i);
+            }
+            finish();
+        }
     }
 }

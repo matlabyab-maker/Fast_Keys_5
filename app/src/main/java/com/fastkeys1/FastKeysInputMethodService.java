@@ -79,6 +79,15 @@ public class FastKeysInputMethodService extends InputMethodService {
         if (keyboard != null) keyboard.refreshSuggestions();
     }
 
+    public void launchScreenMagnifier() {
+        try {
+            Intent i = new Intent(this, MainActivity.class);
+            i.setAction("com.fastkeys1.START_MAGNIFIER");
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+            startActivity(i);
+        } catch (Exception ignored) {}
+    }
+
     public void showInputMethodPickerSafe() {
         try {
             InputMethodManager imm = (InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);

@@ -1,12 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
 <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/><application android:theme="@style/AppTheme" android:label="Fast_Keys_1" android:allowBackup="false" android:supportsRtl="true"><activity android:name=".MainActivity" android:exported="true">
+<uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/><uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION"/><application android:theme="@style/AppTheme" android:label="Fast_Keys_1" android:allowBackup="false" android:supportsRtl="true"><activity android:name=".MainActivity" android:exported="true">
 <intent-filter>
 <action android:name="android.intent.action.MAIN"/>
 <category android:name="android.intent.category.LAUNCHER"/>
 </intent-filter>
-</activity><service android:name=".FastKeysInputMethodService" android:label="Fast_Keys_1" android:permission="android.permission.BIND_INPUT_METHOD" android:exported="true"><intent-filter><action android:name="android.view.InputMethod"/><category android:name="android.intent.category.DEFAULT"/></intent-filter><meta-data android:name="android.view.im" android:resource="@xml/method"/></service><service android:name=".SteeringOverlayService" android:exported="false" android:foregroundServiceType="specialUse"/>
+</activity><service android:name=".FastKeysInputMethodService" android:label="Fast_Keys_1" android:permission="android.permission.BIND_INPUT_METHOD" android:exported="true"><intent-filter><action android:name="android.view.InputMethod"/><category android:name="android.intent.category.DEFAULT"/></intent-filter><meta-data android:name="android.view.im" android:resource="@xml/method"/></service><service android:name=".SteeringOverlayService" android:exported="false" android:foregroundServiceType="specialUse"/><service android:name=".ScreenMagnifierService" android:exported="false" android:foregroundServiceType="mediaProjection"/>
 <service android:name=".SteeringTileService" android:label="فرمان ماشین" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE" android:exported="true"><intent-filter><action android:name="android.service.quicksettings.action.QS_TILE"/></intent-filter></service>
 <receiver android:name=".KeysWidgetProvider" android:exported="true"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/appwidget_info"/></receiver>
 </application></manifest>
