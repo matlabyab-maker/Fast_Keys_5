@@ -176,7 +176,8 @@ public class FastKeysKeyboardView extends View {
         });
         magnifierButton.setOnClickListener(v -> {
             magnifier = !magnifier;
-            if (!magnifier) { magnifierX = -1; magnifierY = -1; }
+            magnifierX = -1;
+            magnifierY = -1;
             popup.dismiss();
             invalidate();
         });
@@ -383,6 +384,7 @@ public class FastKeysKeyboardView extends View {
     }
 
     private void showEmojiPicker() {
+        final android.view.inputmethod.InputConnection target = service.getCurrentInputConnection();
         final String[] emojis = {
                 "😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃",
                 "😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜",
@@ -396,41 +398,24 @@ public class FastKeysKeyboardView extends View {
                 "👏","🙌","🙏","🤝","👌","✌️","🤞","🤟","🤘","🤙","👋","💪",
                 "🔥","⭐","✨","🎉","🎊","💯","✅","❌","⚡","🌹","🌸","🌺"
         };
-        LinearLayout root = new LinearLayout(service);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(12,12,12,12);
-        TextView title = new TextView(service);
-        title.setText("انتخاب Emoji"); title.setTextSize(20); title.setGravity(Gravity.CENTER); title.setTextColor(NAVY);
-        root.addView(title, new LinearLayout.LayoutParams(-1, dp(48)));
         ScrollView scroll = new ScrollView(service);
-        GridLayout grid = new GridLayout(service); grid.setColumnCount(6); grid.setPadding(4,4,4,4);
+        GridLayout grid = new GridLayout(service);
+        grid.setColumnCount(6);
+        grid.setPadding(8,8,8,8);
         for (String emoji : emojis) {
             Button b = new Button(service);
             b.setText(emoji); b.setTextSize(24); b.setAllCaps(false);
             GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
-            lp.width = 0; lp.height = dp(52); lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f); lp.setMargins(1,1,1,1);
-            grid.addView(b, lp);
-            b.setOnClickListener(v -> { service.type(emoji); });
+            lp.width = 0; lp.height = dp(52); lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
+            lp.setMargins(1,1,1,1); grid.addView(b,lp);
+            b.setOnClickListener(v -> { if (target != null) service.typeTo(target, emoji); });
         }
         scroll.addView(grid);
-        root.addView(scroll, new LinearLayout.LayoutParams(-1, dp(300), 1f));
-        Button close = drawerButton("بستن");
-        root.addView(close, new LinearLayout.LayoutParams(-1, dp(52)));
-        final PopupWindow popup = new PopupWindow(root, Math.min((int)(getWidth()*0.94f), 720), dp(410), true);
-        popup.setBackgroundDrawable(new ColorDrawable(Color.WHITE)); popup.setOutsideTouchable(true); popup.setElevation(8f);
-        close.setOnClickListener(v -> popup.dismiss());
-        popup.showAtLocation(this, Gravity.CENTER, 0, 0);
-    }
-
-    private void showSymbols() {
-        final String[] symbols = {"!","@","#","$","%","^","&","*","(",")","-","_","=","+","[","]","{","}","<",">","/","?","\\","|","~","`","€","£","¥","©","®","™","°","±","×","÷","≤","≥","≠","∞","√","•","…","،","؛","«","»","؟"};
-        LinearLayout root = new LinearLayout(service); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(12,12,12,12);
-        TextView title = new TextView(service); title.setText("نمادها"); title.setTextSize(20); title.setGravity(Gravity.CENTER); title.setTextColor(NAVY); root.addView(title,new LinearLayout.LayoutParams(-1,dp(48)));
-        ScrollView scroll = new ScrollView(service); GridLayout grid = new GridLayout(service); grid.setColumnCount(5); grid.setPadding(4,4,4,4);
-        for(String symbol:symbols){ Button b=new Button(service); b.setText(symbol); b.setTextSize(22); b.setAllCaps(false); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(54); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(2,2,2,2); grid.addView(b,lp); b.setOnClickListener(v->{service.type(symbol);}); }
-        scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,dp(300),1f));
-        Button close=drawerButton("بستن"); root.addView(close,new LinearLayout.LayoutParams(-1,dp(52)));
-        final PopupWindow popup=new PopupWindow(root,Math.min((int)(getWidth()*0.94f),720),dp(410),true); popup.setBackgroundDrawable(new ColorDrawable(Color.WHITE)); popup.setOutsideTouchable(true); popup.setElevation(8f); close.setOnClickListener(v->popup.dismiss()); popup.showAtLocation(this,Gravity.CENTER,0,0);
+        LinearLayout root = new LinearLayout(service); root.setOrientation(LinearLayout.VERTICAL);
+        TextView title = new TextView(service); title.setText("انتخاب Emoji"); title.setTextSize(20); title.setGravity(Gravity.CENTER); title.setTextColor(NAVY);
+        root.addView(title,new LinearLayout.LayoutParams(-1,56)); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
+        AlertDialog d = new AlertDialog.Builder(service).setView(root).setNegativeButton("بستن",null).create();
+        d.show();
     }
 
     private void showNastaliqKeyboard() {
@@ -442,7 +427,7 @@ public class FastKeysKeyboardView extends View {
             LinearLayout line = new LinearLayout(service); line.setGravity(Gravity.CENTER); line.setOrientation(LinearLayout.HORIZONTAL);
             for(int i=0;i<row.length();i++){
                 final String ch=String.valueOf(row.charAt(i)); Button b=new Button(service); b.setText(ch); b.setTextSize(24); b.setTypeface(nastaliqTypeface);
-                b.setAllCaps(false); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(58),1f); lp.setMargins(2,2,2,2); line.addView(b,lp); b.setOnClickListener(v->service.type(ch));
+                b.setAllCaps(false); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(58),1f); lp.setMargins(2,2,2,2); line.addView(b,lp); b.setOnClickListener(v->{ if (service.getCurrentInputConnection()!=null) service.getCurrentInputConnection().commitText(ch,1); });
             }
             root.addView(line);
         }
@@ -451,6 +436,7 @@ public class FastKeysKeyboardView extends View {
     }
 
     private void showEmojiMaker() {
+        final android.view.inputmethod.InputConnection target = service.getCurrentInputConnection();
         LinearLayout root = new LinearLayout(service);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(24, 10, 24, 10);
@@ -490,7 +476,7 @@ public class FastKeysKeyboardView extends View {
                 .setView(root)
                 .setPositiveButton("ساخت و درج", (d, which) -> {
                     String emojiText = input.getText().toString();
-                    if (!emojiText.isEmpty()) service.type(emojiText);
+                    if (!emojiText.isEmpty() && target != null) service.typeTo(target, emojiText);
                 })
                 .setNegativeButton("بستن", null)
                 .show();
@@ -731,7 +717,7 @@ public class FastKeysKeyboardView extends View {
 
         y+=keyH+gap;
         float[] w2={.55f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,1.45f};
-        String[] sy={"⌃","!\n۱","@\n۲","#\n۳","$\n۴","%\n۵","^\n۶","&\n۷","*\n۸","(\n۹",")\n۰","-\n_","=\n+","⌫"};
+        String[] sy={"⌃","!\n۱","@\n۲","#\n۳","$\n۴","%\n۵","^\n۶","&\n۷","*\n۸","(\n۹",")\n۰","_\n-","+\n=","⌫"};
         float total2=0; for(float q:w2) total2+=q;
         float ww2=(w-gap*(w2.length+1))/total2, xx2=gap;
         for(int i=0;i<w2.length;i++){
@@ -756,27 +742,30 @@ public class FastKeysKeyboardView extends View {
         rowFromRightReserved(c,y,keyH,r4,enterW);
 
         y+=keyH+gap;
-        String[] r5={"،","ژ","ذ","ز","گ","چ","پ","ب","ن","م","/\n؟"};
+        String[] r5={"،","ژ","ذ","ز","د","چ","پ","و","ن","م","/\n؟"};
         rowFromRightReserved(c,y,keyH,r5,enterW);
         keyWithBackground(c,w-enterW,y-keyH-gap,w,y+keyH+gap,"Enter",NAVY,ENTER_BG,false);
 
         y+=keyH+gap;
         float[] bw={1,1,1,3.9f,1.35f,1.35f,1.15f,1.15f};
-        String[] b={"123","◎","😀","Space","←","→","↑","↓"};
+        String[] b={"!#@","◎","😀","Space","←","→","↑","↓"};
         row(c,y,bw,b);
     }
 
     private void drawCapsAndMagnifierRow(Canvas c,float y){
         float left=keyH+gap;
         float available=getWidth()-left-gap;
-        float capsW=keyH*.62f;
-        float remaining=available-capsW-gap*15;
+        float capsW=keyH*.70f;
+        float remaining=available-capsW-gap*14f;
         float normalW=remaining/13f;
         float x=left+gap;
 
         key(c,x,y,x+capsW,y+keyH,"",NAVY,false);
         txt(c,"Caps",x+capsW/2,y+keyH/2,Math.min(13,keyH*.25f),NAVY);
-        if(caps){ p.setColor(GREEN); c.drawCircle(x+10,y+10,4,p); }
+        if(caps){
+            p.setColor(GREEN);
+            c.drawCircle(x+10,y+10,4,p);
+        }
         x+=capsW+gap;
 
         String[] letters={"ض","ص","ث","ق","ف","غ","ع","ه","خ","ج","{\n[","}\n]","|\n\\"};
@@ -824,8 +813,7 @@ public class FastKeysKeyboardView extends View {
                 txt(c,a[0],x+cw/2,y+keyH*.35f,Math.min(20,keyH*.3f),NAVY);
                 txt(c,a[1],x+cw/2,y+keyH*.7f,Math.min(20,keyH*.3f),NAVY);
             }else{
-                if ("←→↑↓".contains(s)) drawArrow(c,x,y,cw,keyH,s);
-                else key(c,x,y,x+cw,y+keyH,s,NAVY,false);
+                key(c,x,y,x+cw,y+keyH,s,NAVY,false);
             }
             x+=cw+gap;
         }
@@ -857,14 +845,7 @@ public class FastKeysKeyboardView extends View {
 
     private void drawArrow(Canvas c,float x,float y,float ww,float hh,String s){
         key(c,x,y,x+ww,y+hh,"",NAVY,true);
-        p.setColor(BLUE); p.setStyle(Paint.Style.FILL);
-        Path a=new Path(); float cx=x+ww/2f, cy=y+hh/2f; float arm=hh*.26f, head=hh*.18f;
-        if (s.equals("←")){ a.moveTo(cx-head,cy); a.lineTo(cx+arm,cy-head); a.lineTo(cx+arm,cy+head); a.close(); c.drawPath(a,p); c.drawRect(cx-head,cy, cx+arm, cy+0, p); }
-        else if (s.equals("→")){ a.moveTo(cx+head,cy); a.lineTo(cx-arm,cy-head); a.lineTo(cx-arm,cy+head); a.close(); c.drawPath(a,p); }
-        else if (s.equals("↑")){ a.moveTo(cx,cy-head); a.lineTo(cx-head,cy+arm); a.lineTo(cx+head,cy+arm); a.close(); c.drawPath(a,p); }
-        else { a.moveTo(cx,cy+head); a.lineTo(cx-head,cy-arm); a.lineTo(cx+head,cy-arm); a.close(); c.drawPath(a,p); }
-        if (s.equals("←") || s.equals("→")) c.drawRect(cx-(s.equals("←")?head:arm), cy-head*.38f, cx+(s.equals("←")?arm:head), cy+head*.38f, p);
-        else c.drawRect(cx-head*.38f, cy-(s.equals("↑")?arm:head), cx+head*.38f, cy+(s.equals("↑")?head:arm), p);
+        txt(c,s,x+ww/2,y+hh/2,hh*.55f,NAVY);
     }
 
     private void drawPressGlow(Canvas c){
@@ -957,13 +938,13 @@ public class FastKeysKeyboardView extends View {
         if(row==0){float[] wt={.55f,1.45f,1.55f,1.05f,1,1,1,1.25f,.55f};float total=0;for(float q:wt)total+=q;float u=(w-gap*(wt.length+1))/total;for(int i=0;i<wt.length;i++){r=l+u*wt[i];if(x>=l&&x<=r){setPressGlow(l,t,r,b,held);return;}l=r+gap;}return;}
         if(row==1){float cw=w/3f;int i=Math.max(0,Math.min(2,(int)(x/cw)));setPressGlow(i*cw,t,(i+1)*cw,b,held);return;}
         if(row==2){float[] wt={.55f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,1.45f};float total=0;for(float q:wt)total+=q;float u=(w-gap*(wt.length+1))/total;for(int i=0;i<wt.length;i++){r=l+u*wt[i];if(x>=l&&x<=r){setPressGlow(l,t,r,b,held);return;}l=r+gap;}return;}
-        if(row==3){float left=keyH+gap,capsW=keyH*.62f,available=w-left-gap,normalW=(available-capsW-gap*15)/13f,x0=left+gap;if(x>=x0&&x<x0+capsW){setPressGlow(x0,t,x0+capsW,b,held);return;}x0+=capsW+gap;for(int i=0;i<13;i++){if(x>=x0&&x<=x0+normalW){setPressGlow(x0,t,x0+normalW,b,held);return;}x0+=normalW+gap;}return;}
+        if(row==3){float left=keyH+gap,capsW=keyH*.70f,available=w-left-gap,normalW=(available-capsW-gap*14f)/13f,x0=left+gap;if(x>=x0&&x<x0+capsW){setPressGlow(x0,t,x0+capsW,b,held);return;}x0+=capsW+gap;for(int i=0;i<13;i++){if(x>=x0&&x<x0+normalW){setPressGlow(x0,t,x0+normalW,b,held);return;}x0+=normalW+gap;}return;}
         if(row==4 || row==5){
             float enterW=keyH+gap;
             if(x>w-enterW){setPressGlow(w-enterW,t-(row==5?(keyH+gap):0),w,b+(row==4?(keyH+gap):0),held);return;}
             if(row==4 && x<keyH){setPressGlow(0,t,keyH,b,held);return;}
-            float left=(row==4)?keyH:0;
-            int count=(row==4)?11:11;
+            float left=keyH;
+            int count=11;
             float available=w-left-enterW-gap;
             float cw=(available-gap*(count+1))/count;
             int i=Math.max(0,Math.min(count-1,(int)((x-(left+gap))/(cw+gap))));
@@ -1040,41 +1021,117 @@ public class FastKeysKeyboardView extends View {
     private void handle(float x,float y){
         float w=getWidth();
         int row=(int)((y-gap)/(keyH+gap));
+        if(row<0 || row>6) return;
+
         if(row==0){
             float[] wt={.55f,1.45f,1.55f,1.05f,1.0f,1.0f,1.0f,1.25f,.55f};
-            float total=0; for(float q:wt) total+=q; float unit=(w-gap*(wt.length+1))/total, x0=gap; int i=0;
-            for(;i<wt.length;i++){float r=x0+unit*wt[i]; if(x>=x0&&x<=r)break; x0=r+gap;}
-            if(i==1)service.copyAll(); else if(i==2)service.copyScreen(); else if(i==3)service.paste(); else if(i==4)service.cut(); else if(i==5)service.undo(); else if(i==6)service.redo(); else if(i==7)showClipboardHistory(); else if(i==8)showDrawer(); return;
+            float total=0; for(float q:wt) total+=q;
+            float unit=(w-gap*(wt.length+1))/total, x0=gap;
+            for(int i=0;i<wt.length;i++){
+                float r=x0+unit*wt[i];
+                if(x>=x0 && x<r){
+                    if(i==0) service.copyAll();
+                    else if(i==1) service.copyScreen();
+                    else if(i==2) service.paste();
+                    else if(i==3) service.cut();
+                    else if(i==4) service.undo();
+                    else if(i==5) service.redo();
+                    else if(i==6) showClipboardHistory();
+                    else if(i==7) showDrawer();
+                    return;
+                }
+                x0=r+gap;
+            }
+            return;
         }
-        if(row==1){int i=Math.max(0,Math.min(2,(int)(x/(w/3f)))); if(!suggestions[i].isEmpty())service.replaceCurrentWord(suggestions[i]); return;}
+        if(row==1){
+            int i=Math.max(0,Math.min(2,(int)(x/(w/3f))));
+            if(!suggestions[i].isEmpty()) service.replaceCurrentWord(suggestions[i]);
+            return;
+        }
         if(row==2){
             float[] wt={.55f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,1.45f};
-            float total=0;for(float q:wt)total+=q;float unit=(w-gap*(wt.length+1))/total,x0=gap;int i=0;
-            for(;i<wt.length;i++){float r=x0+unit*wt[i];if(x>=x0&&x<=r)break;x0=r+gap;}
-            if(i==13){startBackspace();return;} String[] s={"!","@","#","$","%","^","&","*","(",")","-","=","+"}; if(i<s.length)service.type(s[i]); return;
+            float total=0; for(float q:wt) total+=q;
+            float unit=(w-gap*(wt.length+1))/total, x0=gap;
+            for(int i=0;i<wt.length;i++){
+                float r=x0+unit*wt[i];
+                if(x>=x0 && x<r){
+                    if(i==0) { caps=!caps; invalidate(); return; }
+                    if(i==13){ startBackspace(); return; }
+                    String[] normal={"۱","۲","۳","۴","۵","۶","۷","۸","۹","۰","-","="};
+                    String[] shifted={"!","@","#","$","%","^","&","*","(",")","_","+"};
+                    service.type(caps ? shifted[i-1] : normal[i-1]);
+                    return;
+                }
+                x0=r+gap;
+            }
+            return;
         }
         if(row==3){
-            float left=keyH+gap,capsW=keyH*.62f,available=w-left-gap,remaining=available-capsW-gap*15,normalW=remaining/13f,x0=left+gap;
-            if(x>=x0&&x<x0+capsW){caps=!caps;invalidate();return;} x0+=capsW+gap;
-            String[] s={"ض","ص","ث","ق","ف","غ","ع","ه","خ","ج","{","}","|"};
-            for(int i=0;i<s.length;i++){if(x>=x0&&x<=x0+normalW){service.type(s[i]);return;}x0+=normalW+gap;} return;
+            float left=keyH+gap, capsW=keyH*.70f;
+            float available=w-left-gap, normalW=(available-capsW-gap*14f)/13f;
+            float x0=left+gap;
+            if(x>=x0 && x<x0+capsW){ caps=!caps; invalidate(); return; }
+            x0+=capsW+gap;
+            String[] normal={"ض","ص","ث","ق","ف","غ","ع","ه","خ","ج","[","]","\\"};
+            String[] shifted={"ض","ص","ث","ق","ف","غ","ع","ه","خ","ج","{","}","|"};
+            for(int i=0;i<13;i++){
+                if(x>=x0 && x<x0+normalW){ service.type(caps ? shifted[i] : normal[i]); return; }
+                x0+=normalW+gap;
+            }
+            return;
         }
         if(row==4 || row==5){
             float enterW=keyH+gap;
-            if(x>w-enterW){service.enter();return;}
-            if(row==4 && x<keyH){service.move(KeyEvent.KEYCODE_DPAD_DOWN);return;}
-            float left=(row==4)?keyH:0;
-            String[] s=(row==4)?new String[]{"ش","س","ی","ب","ل","ت","ا","ک","گ","؛","«"}:new String[]{"،","ژ","ذ","ز","گ","چ","پ","ب","ن","م","/؟"};
+            if(x>=w-enterW){ service.enter(); return; }
+            float left=keyH;
+            if(row==4 && x<keyH){ service.move(KeyEvent.KEYCODE_DPAD_DOWN); return; }
+            if(row==5 && x<keyH){ service.move(KeyEvent.KEYCODE_DPAD_UP); return; }
+            String[] normal=(row==4)?new String[]{"ش","س","ی","ب","ل","ت","ا","ک","گ","؛","«"}
+                    :new String[]{"،","ژ","ذ","ز","د","چ","پ","و","ن","م","/"};
+            String[] shifted=(row==4)?new String[]{"ش","س","ی","ب","ل","ت","ا","ک","گ",":","<"}
+                    :new String[]{"،","ژ","ذ","ز","د","چ","پ","و","ن","م","؟"};
             float available=w-left-enterW-gap;
-            float cw=(available-gap*(s.length+1))/s.length;
-            int i=(int)((x-(left+gap))/(cw+gap));
-            if(i>=0&&i<s.length){service.type(s[i]);}
+            float cw=(available-gap*(normal.length+1))/normal.length;
+            float x0=left+gap;
+            for(int i=0;i<normal.length;i++){
+                if(x>=x0 && x<x0+cw){ service.type(caps ? shifted[i] : normal[i]); return; }
+                x0+=cw+gap;
+            }
             return;
         }
         if(row==6){
-            float[] bw={1,1,1,3.9f,1.35f,1.35f,1.15f,1.15f};float total=0;for(float q:bw)total+=q;float unit=(w-gap*9)/total,x0=gap;int i=0;for(;i<bw.length;i++){float r=x0+unit*bw[i];if(x>=x0&&x<=r)break;x0=r+gap;}
-            if(i==0)showSymbols(); else if(i==1)service.switchInputMethod(null); else if(i==2)showEmojiPicker(); else if(i==3)service.type(" "); else if(i==4)service.move(KeyEvent.KEYCODE_DPAD_LEFT); else if(i==5)service.move(KeyEvent.KEYCODE_DPAD_RIGHT); else if(i==6)service.move(KeyEvent.KEYCODE_DPAD_UP); else if(i==7)service.move(KeyEvent.KEYCODE_DPAD_DOWN);
+            float[] bw={1,1,1,3.9f,1.35f,1.35f,1.15f,1.15f};
+            float total=0; for(float q:bw) total+=q;
+            float unit=(w-gap*(bw.length+1))/total, x0=gap;
+            for(int i=0;i<bw.length;i++){
+                float r=x0+unit*bw[i];
+                if(x>=x0 && x<r){
+                    if(i==0) showSymbolPicker();
+                    else if(i==1) service.switchInputMethod(null);
+                    else if(i==2) showEmojiPicker();
+                    else if(i==3) service.type(" ");
+                    else if(i==4) service.move(KeyEvent.KEYCODE_DPAD_LEFT);
+                    else if(i==5) service.move(KeyEvent.KEYCODE_DPAD_RIGHT);
+                    else if(i==6) service.move(KeyEvent.KEYCODE_DPAD_UP);
+                    else if(i==7) service.move(KeyEvent.KEYCODE_DPAD_DOWN);
+                    return;
+                }
+                x0=r+gap;
+            }
         }
+    }
+
+    private void showSymbolPicker(){
+        final android.view.inputmethod.InputConnection target = service.getCurrentInputConnection();
+        final String[] symbols={"!","@","#","$","%","^","&","*","(",")","-","_","=","+","[","]","{","}","\\","|",";",":",",","<",".",">","/","؟","!#@"};
+        GridLayout grid=new GridLayout(service); grid.setColumnCount(5); grid.setPadding(10,10,10,10);
+        for(String s:symbols){
+            Button b=new Button(service); b.setText(s); b.setTextSize(20); b.setAllCaps(false);
+            GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(58); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(2,2,2,2); grid.addView(b,lp);
+            b.setOnClickListener(v->{ if(target!=null) service.typeTo(target, s); });
+        }
+        AlertDialog d=new AlertDialog.Builder(service).setTitle("نمادها").setView(grid).setNegativeButton("بستن",null).create(); d.show();
     }
 
     private void startBackspace(){

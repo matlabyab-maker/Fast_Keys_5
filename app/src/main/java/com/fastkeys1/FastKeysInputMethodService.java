@@ -21,15 +21,13 @@ public class FastKeysInputMethodService extends InputMethodService {
     private ClipboardManager clipboardManager;
     private ClipboardManager.OnPrimaryClipChangedListener clipListener;
     private static final int MAX_HISTORY = 100;
-    private interface UndoAction { void undo(InputConnection ic); }
-    private final ArrayDeque<UndoAction> undoStack = new ArrayDeque<>();
-    private boolean restoringUndo = false;
-
-    private void pushUndo(UndoAction action) {
-        if (restoringUndo || action == null) return;
-        undoStack.push(action);
-        while (undoStack.size() > 100) undoStack.removeLast();
+    private static final int MAX_UNDO = 200;
+    private static class UndoOp {
+        final String inserted;
+        final String deleted;
+        UndoOp(String inserted, String deleted) { this.inserted = inserted; this.deleted = deleted; }
     }
+    private final ArrayDeque<UndoOp> undoStack = new ArrayDeque<>();
 
     @Override public void onCreate() {
         super.onCreate();
@@ -77,16 +75,23 @@ public class FastKeysInputMethodService extends InputMethodService {
 
     @Override public void onStartInputView(android.view.inputmethod.EditorInfo info, boolean restarting) {
         super.onStartInputView(info, restarting);
-        undoStack.clear();
         if (keyboard != null) keyboard.refreshSuggestions();
     }
 
     public void type(String s) {
         InputConnection ic = getCurrentInputConnection();
         if (ic == null || s == null || s.isEmpty()) return;
-        final int length = s.length();
         ic.commitText(s, 1);
-        pushUndo(ic2 -> ic2.deleteSurroundingText(length, 0));
+        undoStack.push(new UndoOp(s, ""));
+        while (undoStack.size() > MAX_UNDO) undoStack.removeLast();
+        if (keyboard != null) keyboard.refreshSuggestions();
+    }
+
+    public void typeTo(InputConnection ic, String s) {
+        if (ic == null || s == null || s.isEmpty()) return;
+        ic.commitText(s, 1);
+        undoStack.push(new UndoOp(s, ""));
+        while (undoStack.size() > MAX_UNDO) undoStack.removeLast();
         if (keyboard != null) keyboard.refreshSuggestions();
     }
 
@@ -108,11 +113,13 @@ public class FastKeysInputMethodService extends InputMethodService {
     public void backspace() {
         InputConnection ic = getCurrentInputConnection();
         if (ic == null) return;
-        CharSequence before = ic.getTextBeforeCursor(1, 0);
-        if (before == null || before.length() == 0) return;
-        final String deleted = before.toString();
+        CharSequence before = ic.getTextBeforeCursor(2, 0);
+        String deleted = (before == null || before.length() == 0) ? "" : before.subSequence(before.length()-1, before.length()).toString();
         ic.deleteSurroundingText(1, 0);
-        pushUndo(ic2 -> ic2.commitText(deleted, 1));
+        if (!deleted.isEmpty()) {
+            undoStack.push(new UndoOp("", deleted));
+            while (undoStack.size() > MAX_UNDO) undoStack.removeLast();
+        }
         if (keyboard != null) keyboard.refreshSuggestions();
     }
 
@@ -156,39 +163,27 @@ public class FastKeysInputMethodService extends InputMethodService {
 
     public void cut() {
         InputConnection ic = getCurrentInputConnection();
-        if (ic == null) return;
-        CharSequence selected = ic.getSelectedText(0);
-        String text = selected == null ? "" : selected.toString();
-        if (!text.isEmpty()) {
-            ic.performContextMenuAction(android.R.id.cut);
-            pushUndo(ic2 -> ic2.commitText(text, 1));
-        }
-        refresh();
+        if (ic != null) { ic.performContextMenuAction(android.R.id.cut); refresh(); }
     }
 
     public void paste() {
         InputConnection ic = getCurrentInputConnection();
-        if (ic == null || clipboardManager == null || !clipboardManager.hasPrimaryClip()) return;
-        CharSequence text = clipboardManager.getPrimaryClip().getItemAt(0).coerceToText(this);
-        if (text == null || text.length() == 0) return;
-        String s = text.toString();
-        ic.commitText(s, 1);
-        pushUndo(ic2 -> ic2.deleteSurroundingText(s.length(), 0));
-        refresh();
+        if (ic != null) { ic.performContextMenuAction(android.R.id.paste); refresh(); }
     }
 
     public void undo() {
         InputConnection ic = getCurrentInputConnection();
         if (ic == null || undoStack.isEmpty()) return;
-        UndoAction action = undoStack.pop();
-        restoringUndo = true;
-        try { action.undo(ic); } finally { restoringUndo = false; }
-        refresh();
+        UndoOp op = undoStack.pop();
+        if (op.inserted != null && !op.inserted.isEmpty()) {
+            ic.deleteSurroundingText(op.inserted.length(), 0);
+        } else if (op.deleted != null && !op.deleted.isEmpty()) {
+            ic.commitText(op.deleted, 1);
+        }
+        if (keyboard != null) keyboard.refreshSuggestions();
     }
 
     public void redo() {
-        // Keep the existing system redo action; user-requested behavior specifically
-        // changes Undo to one action at a time.
         InputConnection ic = getCurrentInputConnection();
         if (ic != null) ic.performContextMenuAction(android.R.id.redo);
     }
