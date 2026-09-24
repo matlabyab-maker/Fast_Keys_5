@@ -70,7 +70,7 @@ public class ScreenMagnifierService extends Service {
     private void showLens(){
         lens=new LensView(this);
         lp=new WindowManager.LayoutParams(dp(250),dp(250),WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE|WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE|WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS|WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT);
         lp.gravity=Gravity.TOP|Gravity.START; lp.x=Math.max(0,(screenW-dp(250))/2); lp.y=Math.max(0,(screenH-dp(250))/3);
         try{wm.addView(lens,lp);}catch(Exception e){stopSelf();}
@@ -92,7 +92,8 @@ public class ScreenMagnifierService extends Service {
                 float srcW=latest.getWidth()*.22f, srcH=latest.getHeight()*.22f;
                 RectF src=new RectF(screenX-srcW/2,screenY-srcH/2,screenX+srcW/2,screenY+srcH/2);
                 src.left=Math.max(0,src.left); src.top=Math.max(0,src.top); src.right=Math.min(latest.getWidth(),src.right); src.bottom=Math.min(latest.getHeight(),src.bottom);
-                c.drawBitmap(latest,src,new RectF(0,0,getWidth(),getHeight()),paint);
+                Rect srcRect=new Rect(Math.round(src.left),Math.round(src.top),Math.round(src.right),Math.round(src.bottom));
+                c.drawBitmap(latest,srcRect,new RectF(0,0,getWidth(),getHeight()),paint);
             }else{paint.setColor(0xDDFFFFFF);c.drawCircle(cx,cy,cx-4,paint);}
             paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(dp(4)); paint.setColor(0xFF35CD37); c.drawCircle(cx,cy,Math.min(cx,cy)-3,paint); paint.setStyle(Paint.Style.FILL);
         }

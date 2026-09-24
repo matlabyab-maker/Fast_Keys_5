@@ -389,7 +389,7 @@ public class FastKeysKeyboardView extends View {
         for(String emoji:emojis){
             Button b=new Button(service); b.setText(emoji); b.setTextSize(24); b.setAllCaps(false);
             GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(52); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(1,1,1,1); grid.addView(b,lp);
-            b.setOnClickListener(v -> { if(target!=null) service.typeTo(target,emoji); });
+            b.setOnClickListener(v -> service.type(emoji));
         }
         scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
         Button close=drawerButton("بستن"); root.addView(close,new LinearLayout.LayoutParams(-1,58));
@@ -457,7 +457,7 @@ public class FastKeysKeyboardView extends View {
                 .setView(root)
                 .setPositiveButton("ساخت و درج", (d, which) -> {
                     String emojiText = input.getText().toString();
-                    if (!emojiText.isEmpty() && target != null) service.typeTo(target, emojiText);
+                    if (!emojiText.isEmpty()) service.type(emojiText);
                 })
                 .setNegativeButton("بستن", null)
                 .show();
@@ -1118,7 +1118,6 @@ public class FastKeysKeyboardView extends View {
     }
 
     private void showSymbolPicker(){
-        final android.view.inputmethod.InputConnection target = service.getCurrentInputConnection();
         final String[] symbols={"!","@","#","$","%","^","&","*","(",")","-","_","=","+","[","]","{","}","\\","|",";",":",",","<",".",">","/","؟","«","»"};
         LinearLayout root=new LinearLayout(service); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(10,10,10,10);
         TextView title=new TextView(service); title.setText("نمادها"); title.setTextSize(20); title.setGravity(Gravity.CENTER); title.setTextColor(NAVY);
@@ -1128,7 +1127,7 @@ public class FastKeysKeyboardView extends View {
         for(String s:symbols){
             Button b=new Button(service); b.setText(s); b.setTextSize(20); b.setAllCaps(false); b.setTextColor(Color.RED);
             GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(58); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(2,2,2,2); grid.addView(b,lp);
-            b.setOnClickListener(v -> { if(target!=null) service.typeTo(target,s); });
+            b.setOnClickListener(v -> service.type(s));
         }
         scroll.addView(grid,new ScrollView.LayoutParams(-1,-2)); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
         Button close=drawerButton("بستن"); root.addView(close);
