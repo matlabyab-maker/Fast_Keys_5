@@ -208,20 +208,32 @@ public class FastKeysKeyboardView extends View {
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setGravity(Gravity.CENTER_VERTICAL);
         bar.setPadding(2, 0, 2, 0);
-        Button close = drawerButton("×"); close.setTextSize(18);
+        Button close = drawerButton("×"); close.setTextSize(19);
         Button space = drawerButton("Space"); space.setTextSize(13);
         Button back = drawerButton("Backspace"); back.setTextSize(12);
+        styleHeaderButton(close, Color.rgb(205, 45, 45), Color.WHITE);
+        styleHeaderButton(space, BLUE, Color.WHITE);
+        styleHeaderButton(back, BLUE, Color.WHITE);
         TextView title = new TextView(service);
         title.setText(titleText); title.setTextSize(16); title.setTextColor(NAVY); title.setGravity(Gravity.CENTER);
-        bar.addView(close, new LinearLayout.LayoutParams(dp(40), dp(28)));
-        bar.addView(space, new LinearLayout.LayoutParams(dp(62), dp(28)));
-        bar.addView(back, new LinearLayout.LayoutParams(dp(78), dp(28)));
-        bar.addView(title, new LinearLayout.LayoutParams(0, dp(28), 1f));
+        bar.addView(close, new LinearLayout.LayoutParams(dp(42), dp(36)));
+        bar.addView(space, new LinearLayout.LayoutParams(dp(70), dp(36)));
+        bar.addView(back, new LinearLayout.LayoutParams(dp(88), dp(36)));
+        bar.addView(title, new LinearLayout.LayoutParams(0, dp(36), 1f));
         space.setOnClickListener(v -> service.type(" "));
         back.setOnClickListener(v -> service.backspace());
         if (closeHolder != null && closeHolder.length > 0) closeHolder[0] = close;
-        root.addView(bar, new LinearLayout.LayoutParams(-1, dp(30)));
+        root.addView(bar, new LinearLayout.LayoutParams(-1, dp(40)));
         return bar;
+    }
+
+    private void styleHeaderButton(Button b, int background, int foreground) {
+        b.setTextColor(foreground);
+        GradientDrawable gd = new GradientDrawable();
+        gd.setColor(background);
+        gd.setCornerRadius(dp(6));
+        b.setBackground(gd);
+        b.setPadding(0, 0, 0, 0);
     }
 
     private int dp(float v) { return (int)(v * getResources().getDisplayMetrics().density + 0.5f); }
@@ -369,46 +381,59 @@ public class FastKeysKeyboardView extends View {
     }
 
     private void showEmojiPicker() {
-        final android.view.inputmethod.InputConnection target = service.getCurrentInputConnection();
         final String[] emojis = {
-                "😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃",
-                "😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜",
-                "🤪","🤨","🧐","🤓","😎","🤩","🥳","😏","😒","😞","😔","😟",
-                "😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠",
-                "😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗",
-                "🤔","🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧",
-                "😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴","🤢","🤮","🤧",
-                "😷","🤒","🤕","❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎",
-                "💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","👍","👎",
-                "👏","🙌","🙏","🤝","👌","✌️","🤞","🤟","🤘","🤙","👋","💪",
-                "🔥","⭐","✨","🎉","🎊","💯","✅","❌","⚡","🌹","🌸","🌺",
-                "🌻","🌼","🌷","🌱","🌿","🍀","☘️","🍁","🍂","🍃","🌞","🌝","🌚","🌙","🌟","💫","☀️","🌈","☁️","❄️","☃️","🌊",
-                "🍎","🍏","🍊","🍋","🍌","🍉","🍇","🍓","🫐","🍒","🍑","🍍","🥝","🥑","🍅","🥕","🌽","🍞","🧀","🍔","🍟","🍕","🌭","🍿","🍩","🍪",
-                "⚽","🏀","🏈","⚾","🎾","🏐","🎱","🏆","🥇","🥈","🥉","🚗","🚕","🚌","🚓","✈️","🚀","🚲","🛵","🚢",
-                "⌚","📱","💻","🖥️","⌨️","🖨️","📷","🎥","🎧","🎤","📚","✏️","📝","📌","📎","🔒","🔑","💡","🔔","⚙️","❤️‍🔥","💔","💖","💗","💓","💞","💕","💌","💋","👀","👁️","👂","👃","🧠","🫀","🫶","🤲","🙋","🙌","👏","🤝","💪","👊","✊","🤞","✌️","🤟","🤘","🤙","👌","👉","👈","☝️","👇","👆","✍️","💅","🙏",
-                "🙂","🙃","😉","😊","😇","🥰","😍","🤩","😘","😗","😙","😚","😋","😛","😜","🤪","🤨","🧐","🤓","😎","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗","🤔","🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕","🤠","🥸","😈","👿","👹","👺","💀","☠️","👻","👽","🤖","🎃","😺","😸","😹","😻","😼","😽","🙀","😿","😾"
+                "😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🤩","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗","🤔","🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕","🤠","🥸","😈","👿","👹","👺","💀","☠️","👻","👽","🤖","🎃","😺","😸","😹","😻","😼","😽","🙀","😿","😾",
+                "❤️","🩷","🧡","💛","💚","🩵","💙","💜","🤎","🖤","🩶","🤍","💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","💯","💢","💥","💦","💨","💫","💬","🗨️","🗯️","💭","💤",
+                "👍","👎","👏","🙌","🙏","🤝","👌","✌️","🤞","🤟","🤘","🤙","👋","💪","👊","✊","👉","👈","☝️","👇","👆","✍️","💅","🫶","🤲","🙋",
+                "🔥","⭐","✨","🎉","🎊","✅","❌","⚡","🌹","🌸","🌺","🌻","🌼","🌷","🌱","🌿","🍀","☘️","🍁","🍂","🍃","🌞","🌝","🌚","🌙","🌟","💫","☀️","🌈","☁️","❄️","☃️","🌊",
+                "🍎","🍏","🍊","🍋","🍌","🍉","🍇","🍓","🫐","🍒","🍑","🍍","🥝","🥑","🍅","🥕","🌽","🍞","🧀","🍔","🍟","🍕","🌭","🍿","🍩","🍪","🍰","🎂","🍫","🍭","🍬","🍯","🥭","🥥","🥨","🍗","🍖","🌮","🌯","🍜","🍣","🍱","🥗","🍦","☕","🍵","🧃","🥤","🧋",
+                "⚽","🏀","🏈","⚾","🎾","🏐","🎱","🏆","🥇","🥈","🥉","🎯","🎮","🎲","🧩","🎸","🎹","🎺","🥁","🎻","🎬","🎨","🎈","🎁","🎀","🎟️","🎫",
+                "🚗","🚕","🚙","🚌","🚓","🚑","🚒","🚜","🚲","🛵","🏍️","✈️","🚀","🚢","⛵","🚉","🚇","🚦","🛑","🏠","🏢","🏫","🏥","🏰","🗽","⛺",
+                "⌚","📱","💻","🖥️","⌨️","🖨️","📷","🎥","🎧","🎤","📚","✏️","📝","📌","📎","🔒","🔑","💡","🔔","⚙️","🔍","🔎","🔧","🔨","🪛","🧰","🔩","🧲","🔬","🔭","💊","🩺"
         };
         LinearLayout root=new LinearLayout(service); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(8,8,8,8);
         final Button[] headerClose = new Button[1];
         addPopupHeader(root, "انتخاب Emoji", headerClose);
-        ScrollView scroll=new ScrollView(service); GridLayout grid=new GridLayout(service); grid.setColumnCount(8); grid.setPadding(6,6,6,6);
-        for(String emoji:emojis){
-            Button b=new Button(service); b.setText(emoji); b.setTextSize(24); b.setAllCaps(false);
-            GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(48); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(1,1,1,1); grid.addView(b,lp);
-            b.setOnClickListener(v -> service.typeUnit(emoji));
-        }
-        String[] extraEmoji = {"🦁","🐯","🐱","🐶","🐺","🐻","🐼","🐨","🐸","🐵","🙈","🙉","🙊","🐔","🐧","🐦","🐤","🦆","🦅","🦉","🐺","🐗","🐴","🦄","🐝","🐛","🦋","🐌","🐞","🐜","🕷️","🦂","🐢","🐍","🦎","🦖","🦕","🐙","🦑","🦀","🐠","🐟","🐡","🦈","🐳","🐋","🐬","🦭","🐊","🐘","🦏","🦒","🦓","🦌","🐪","🐫","🦘","🦬","🐂","🐄","🐖","🐏","🐑","🦙","🐐","🦃","🦚","🦜","🦢","🕊️","🐉","🐲","🌍","🌎","🌏","🌋","🏔️","🏕️","🏠","🏢","🏫","🏥","🏦","🏰","🗽","🗿","⛺","🎈","🎁","🎂","🍰","🍫","🍭","🍬","🍯","🍉","🥭","🍇","🍓","🥥","🥨","🍗","🍖","🌮","🌯","🍜","🍣","🍱","🥗","🍦","☕","🍵","🧃","🥤","🧸","🎮","🎲","🎯","🎸","🎹","🎺","🥁","🎻","🎬","🎨","🧩","📖","📕","📗","📘","📙","📒","📓","📔","📱","☎️","📡","💾","💿","📀","🔋","🔌","🖱️","🖨️","⌨️","🔍","🔎","🔧","🔨","🪛","🧰","🔩","⚙️","🧲","🔬","🔭","💊","🩺","🚑","🚒","🚛","🚜","🚲","🛴","🏍️","🚁","🛩️","🚢","⛵","🚉","🚇","🚦","🛑"};
-        for(String emoji:extraEmoji){ Button b=new Button(service); b.setText(emoji); b.setTextSize(24); b.setAllCaps(false); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(48); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(1,1,1,1); grid.addView(b,lp); b.setOnClickListener(v->service.type(emoji)); }
-        String[] moreEmoji={"🦊","🐻‍❄️","🦥","🦦","🦨","🦡","🦫","🦔","🐾","🐣","🐥","🦎","🦧","🦍","🐅","🐆","🦓","🦣","🦒","🦘","🦙","🦛","🦏","🦚","🦜","🦩","🦢","🦤","🐋","🐬","🦭","🪼","🪸","🐚","🌵","🌴","🌲","🌳","🌾","🌷","🪻","🌹","🥀","🪷","🌺","🌸","🌼","🌻","🍄","🌰","🫘","🥜","🌽","🥦","🥬","🥒","🫑","🌶️","🫛","🥕","🧄","🧅","🥔","🍠","🥐","🥯","🥖","🥨","🧇","🥞","🧈","🍳","🥚","🧀","🥩","🍗","🍖","🌭","🍔","🍟","🍕","🫓","🥪","🥙","🧆","🌮","🌯","🥗","🍝","🍜","🍲","🍛","🍣","🍤","🥟","🦪","🍚","🍙","🍘","🍥","🍡","🍧","🍨","🍦","🥧","🧁","🍰","🎂","🍮","🍭","🍬","🍫","🍿","🧋","🍵","🫖","🍶","🍺","🍻","🥂","🍷","🥃","🍸","🍹","🧉","🍾","⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🥏","🎱","🪀","🏓","🏸","🏒","🏑","🥍","🏏","⛳","🪁","🏹","🎣","🤿","🥊","🥋","🛹","🛷","⛸️","🥌","🎿","⛷️","🏂","🪂","🏋️","🤸","🤼","🤽","🚴","🚵","🏊","🤽","🧗","🚗","🚕","🚙","🚌","🚎","🏎️","🚓","🚑","🚒","🚐","🛻","🚚","🚛","🚜","🛵","🏍️","🚲","🛴","✈️","🛫","🛬","🛩️","🚁","🚀","🛸","🚢","⛵","🛥️","🚤","⚓","🚉","🚆","🚇","🚊","🚝","🚞","🚋","🚌","🚦","🚥","🗺️","🧭","⌛","⏳","⏰","🕰️","📅","📆","🗓️","📌","📍","✂️","🖊️","🖋️","✒️","🖌️","🖍️","📐","📏","🔗","🔐","🔓","🔨","🪚","🪛","🔧","🪜","🧲","🔭","🔬","🧪","🧫","🧬","💡","🔦","🏮","🎃","🎁","🎀","🎗️","🎟️","🎫","🎖️","🏅","🎯","🎮","🕹️","🎰","🎲","🧩","♟️","🎵","🎶","🎼","🎷","🎺","🎸","🪕","🎻","🥁","📻","📺","📷","📹","📼","☎️","📞","📱","💻","🖥️","⌨️","🖱️","💿","💾","💽","🔋","🔌","🌐","🔎","🔍","🔑","🔒","🔔","🔕","❤️","🩷","🧡","💛","💚","🩵","💙","💜","🤎","🖤","🩶","🤍","💯","💢","💥","💦","💨","💫","💬","🗨️","🗯️","💭","💤"};
-for(String emoji:moreEmoji){ Button b=new Button(service); b.setText(emoji); b.setTextSize(24); b.setAllCaps(false); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(48); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(1,1,1,1); grid.addView(b,lp); b.setOnClickListener(v -> service.typeUnit(emoji)); }
-TextView countryTitle=new TextView(service); countryTitle.setText("پرچم کشورها و پوشه‌های رنگی"); countryTitle.setTextColor(NAVY); countryTitle.setTextSize(15); countryTitle.setGravity(Gravity.CENTER); root.addView(countryTitle,new LinearLayout.LayoutParams(-1,dp(30)));
-        GridLayout countryGrid=new GridLayout(service); countryGrid.setColumnCount(8); countryGrid.setPadding(4,2,4,2); addCountryAndFolderEmojis(countryGrid);
-        ScrollView countryScroll=new ScrollView(service); countryScroll.addView(countryGrid,new ScrollView.LayoutParams(-1,-2)); root.addView(countryScroll,new LinearLayout.LayoutParams(-1,dp(220)));
-        scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
-        final PopupWindow popup=new PopupWindow(root,Math.min((int)(getWidth()*0.96f),720),Math.min(dp(520),Math.max(dp(300),getHeight()-dp(10))),false);
+        ScrollView scroll=new ScrollView(service);
+        LinearLayout all=new LinearLayout(service); all.setOrientation(LinearLayout.VERTICAL);
+        GridLayout grid=new GridLayout(service); grid.setColumnCount(8); grid.setPadding(6,6,6,6);
+        for(String emoji:emojis) addEmojiButton(grid, emoji);
+        all.addView(grid, new LinearLayout.LayoutParams(-1,-2));
+        TextView countryTitle=new TextView(service); countryTitle.setText("پرچم کشورها"); countryTitle.setTextColor(NAVY); countryTitle.setTextSize(15); countryTitle.setGravity(Gravity.CENTER);
+        all.addView(countryTitle,new LinearLayout.LayoutParams(-1,dp(34)));
+        GridLayout countryGrid=new GridLayout(service); countryGrid.setColumnCount(8); countryGrid.setPadding(4,2,4,2);
+        addCountryFlags(countryGrid);
+        all.addView(countryGrid,new LinearLayout.LayoutParams(-1,-2));
+        TextView folderTitle=new TextView(service); folderTitle.setText("پوشه‌های رنگی"); folderTitle.setTextColor(NAVY); folderTitle.setTextSize(15); folderTitle.setGravity(Gravity.CENTER);
+        all.addView(folderTitle,new LinearLayout.LayoutParams(-1,dp(34)));
+        GridLayout folderGrid=new GridLayout(service); folderGrid.setColumnCount(5); folderGrid.setPadding(8,2,8,8);
+        int[] folderColors={Color.rgb(245,195,45),Color.rgb(255,145,40),Color.rgb(235,70,70),Color.rgb(55,175,85),Color.rgb(45,125,220),Color.rgb(125,80,205),Color.rgb(235,80,155),Color.rgb(125,85,45),Color.rgb(80,85,95),Color.rgb(25,155,165)};
+        for(int color:folderColors) addColoredFolderButton(folderGrid,color);
+        all.addView(folderGrid,new LinearLayout.LayoutParams(-1,-2));
+        scroll.addView(all,new ScrollView.LayoutParams(-1,-2));
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
+        final PopupWindow popup=new PopupWindow(root,Math.min((int)(getWidth()*0.96f),720),Math.min(dp(620),Math.max(dp(380),getHeight()-dp(10))),false);
         popup.setBackgroundDrawable(new ColorDrawable(Color.WHITE)); popup.setTouchable(true); popup.setFocusable(false); popup.setOutsideTouchable(true); popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED); popup.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING); popup.setElevation(10f);
         headerClose[0].setOnClickListener(v->popup.dismiss());
         popup.showAtLocation(this,Gravity.TOP|Gravity.CENTER_HORIZONTAL,0,dp(6));
+    }
+
+    private void addCountryFlags(GridLayout grid) {
+        String[] countries={"AF","AL","DZ","AS","AD","AO","AI","AQ","AG","AR","AM","AW","AU","AT","AZ","BS","BH","BD","BB","BY","BE","BZ","BJ","BM","BT","BO","BQ","BA","BW","BV","BR","IO","BN","BG","BF","BI","CV","KH","CM","CA","KY","CF","TD","CL","CN","CX","CC","CO","KM","CG","CD","CK","CR","CI","HR","CU","CW","CY","CZ","DK","DJ","DM","DO","EC","EG","SV","GQ","ER","EE","SZ","ET","FK","FO","FJ","FI","FR","GF","PF","TF","GA","GM","GE","DE","GH","GI","GR","GL","GD","GP","GU","GT","GG","GN","GW","GY","HT","HN","HK","HU","IS","IN","ID","IR","IQ","IE","IM","IL","IT","JM","JP","JE","JO","KZ","KE","KI","KP","KR","KW","KG","LA","LV","LB","LS","LR","LY","LI","LT","LU","MO","MG","MW","MY","MV","ML","MT","MH","MQ","MR","MU","YT","MX","FM","MD","MC","MN","ME","MS","MA","MZ","MM","NA","NR","NP","NL","NC","NZ","NI","NE","NG","NU","NF","MK","MP","NO","OM","PK","PW","PS","PA","PG","PY","PE","PH","PN","PL","PT","PR","QA","RE","RO","RU","RW","BL","SH","KN","LC","MF","PM","VC","WS","SM","ST","SA","SN","RS","SC","SL","SG","SX","SK","SI","SB","SO","ZA","GS","SS","ES","LK","SD","SR","SJ","SE","CH","SY","TW","TJ","TZ","TH","TL","TG","TK","TO","TT","TN","TR","TM","TC","TV","UG","UA","AE","GB","US","UM","UY","UZ","VU","VE","VN","VG","VI","WF","EH","YE","ZM","ZW"};
+        for(String code:countries) addEmojiButton(grid,flagFromCode(code));
+    }
+
+    private void addColoredFolderButton(GridLayout grid, int color) {
+        final FolderEmojiView folder = new FolderEmojiView(service, color);
+        GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(56); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(2,2,2,2); grid.addView(folder,lp);
+        folder.setOnClickListener(v -> service.typeUnit("📁"));
+    }
+
+    private class FolderEmojiView extends View {
+        private final Paint fp=new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final int color;
+        FolderEmojiView(Context c,int color){super(c);this.color=color;setContentDescription("📁");}
+        @Override protected void onDraw(Canvas c){super.onDraw(c);float w=getWidth(),h=getHeight();float l=w*.18f,r=w*.82f,t=h*.28f,b=h*.72f;fp.setColor(color);fp.setStyle(Paint.Style.FILL);Path path=new Path();path.moveTo(l,t+h*.06f);path.lineTo(l+w*.20f,t+h*.06f);path.lineTo(l+w*.28f,t);path.lineTo(l+w*.48f,t);path.lineTo(l+w*.55f,t+h*.10f);path.lineTo(r,t+h*.10f);path.lineTo(r,b);path.lineTo(l,b);path.close();c.drawPath(path,fp);fp.setColor(Color.argb(70,255,255,255));c.drawRect(l+w*.06f,t+h*.16f,r-w*.06f,t+h*.22f,fp);}
     }
 
     private void showNastaliqKeyboard() {
@@ -442,15 +467,6 @@ TextView countryTitle=new TextView(service); countryTitle.setText("پرچم کش
         Button b=new Button(service); b.setText(emoji); b.setTextSize(24); b.setAllCaps(false); b.setPadding(0,0,0,0); b.setGravity(Gravity.CENTER);
         GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(48); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(1,1,1,1); grid.addView(b,lp);
         b.setOnClickListener(v -> service.typeUnit(emoji));
-    }
-
-    private void addCountryAndFolderEmojis(GridLayout grid) {
-        String[] countries={
-            "AF","AL","DZ","AS","AD","AO","AI","AQ","AG","AR","AM","AW","AU","AT","AZ","BS","BH","BD","BB","BY","BE","BZ","BJ","BM","BT","BO","BQ","BA","BW","BV","BR","IO","BN","BG","BF","BI","CV","KH","CM","CA","KY","CF","TD","CL","CN","CX","CC","CO","KM","CG","CD","CK","CR","CI","HR","CU","CW","CY","CZ","DK","DJ","DM","DO","EC","EG","SV","GQ","ER","EE","SZ","ET","FK","FO","FJ","FI","FR","GF","PF","TF","GA","GM","GE","DE","GH","GI","GR","GL","GD","GP","GU","GT","GG","GN","GW","GY","HT","HM","VA","HN","HK","HU","IS","IN","ID","IR","IQ","IE","IM","IL","IT","JM","JP","JE","JO","KZ","KE","KI","KP","KR","KW","KG","LA","LV","LB","LS","LR","LY","LI","LT","LU","MO","MG","MW","MY","MV","ML","MT","MH","MQ","MR","MU","YT","MX","FM","MD","MC","MN","ME","MS","MA","MZ","MM","NA","NR","NP","NL","NC","NZ","NI","NE","NG","NU","NF","MK","MP","NO","OM","PK","PW","PS","PA","PG","PY","PE","PH","PN","PL","PT","PR","QA","RE","RO","RU","RW","BL","SH","KN","LC","MF","PM","VC","WS","SM","ST","SA","SN","RS","SC","SL","SG","SX","SK","SI","SB","SO","ZA","GS","SS","ES","LK","SD","SR","SJ","SE","CH","SY","TW","TJ","TZ","TH","TL","TG","TK","TO","TT","TN","TR","TM","TC","TV","UG","UA","AE","GB","US","UM","UY","UZ","VU","VE","VN","VG","VI","WF","EH","YE","ZM","ZW"
-        };
-        for(String code:countries) addEmojiButton(grid, flagFromCode(code));
-        String[] folders={"📁","📂","🗂️","🗃️","🗄️","🗂","🗃","🗄","🟥📁","🟧📁","🟨📁","🟩📁","🟦📁","🟪📁","🟫📁","⬛📁","⬜📁","🩷📁","🩵📁","🩶📁","📁❤️","📁⭐","📁🔒","📁🔐","📁✨"};
-        for(String emoji:folders) addEmojiButton(grid, emoji);
     }
 
     private void showEmojiMaker() {
@@ -890,7 +906,7 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
     }
 
     private void drawPressGlow(Canvas c){
-        float inset = Math.max(3f, keyH * .055f);
+        float inset = Math.max(2f, keyH * .045f);
         c.save();
         c.clipRect(pressL + inset, pressT + inset, pressR - inset, pressB - inset);
         p.setStyle(Paint.Style.FILL);

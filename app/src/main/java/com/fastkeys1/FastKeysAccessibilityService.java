@@ -52,8 +52,26 @@ public class FastKeysAccessibilityService extends AccessibilityService {
     public static void disable(){ if(instance!=null) instance.stopSelf(); }
     public static void scrollToTop(){ if(instance!=null) instance.scrollTop(); }
     private void tap(boolean right){ if(right){longPress(cursorX,cursorY);return;} if(clickNodeAt(getRootInActiveWindow(),cursorX,cursorY)) return; clickAt(cursorX,cursorY); }
-    private void scrollTop(){ AccessibilityNodeInfo root=getRootInActiveWindow(); if(root==null)return; for(int pass=0;pass<24;pass++){if(!scrollNodes(root))break;} }
-    private boolean scrollNodes(AccessibilityNodeInfo node){ if(node==null)return false; boolean moved=false; try{if(node.isScrollable())moved|=node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD);for(int i=0;i<node.getChildCount();i++)moved|=scrollNodes(node.getChild(i));}catch(Exception ignored){}return moved; }
+    private void scrollTop(){
+        final int[] pass={0};
+        final Runnable[] runner=new Runnable[1];
+        runner[0]=() -> {
+            AccessibilityNodeInfo root=getRootInActiveWindow();
+            if(root==null || pass[0]++ >= 45) return;
+            boolean moved=scrollNodes(root);
+            if(moved) handler.postDelayed(runner[0],70);
+        };
+        handler.post(runner[0]);
+    }
+    private boolean scrollNodes(AccessibilityNodeInfo node){
+        if(node==null)return false;
+        boolean moved=false;
+        try{
+            if(node.isScrollable()) moved|=node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD);
+            for(int i=0;i<node.getChildCount();i++) moved|=scrollNodes(node.getChild(i));
+        }catch(Exception ignored){}
+        return moved;
+    }
     private boolean clickNodeAt(AccessibilityNodeInfo node,float x,float y){if(node==null)return false;try{for(int i=node.getChildCount()-1;i>=0;i--)if(clickNodeAt(node.getChild(i),x,y))return true;android.graphics.Rect b=new android.graphics.Rect();node.getBoundsInScreen(b);if(b.contains((int)x,(int)y)&&node.isVisibleToUser()&&node.isClickable())return node.performAction(AccessibilityNodeInfo.ACTION_CLICK);}catch(Exception ignored){}return false;}
     private void clickAt(float x,float y){Path p=new Path();p.moveTo(x,y);GestureDescription g=new GestureDescription.Builder().addStroke(new GestureDescription.StrokeDescription(p,0,60)).build();dispatchGesture(g,null,null);}
     private void longPress(float x,float y){Path p=new Path();p.moveTo(x,y);GestureDescription g=new GestureDescription.Builder().addStroke(new GestureDescription.StrokeDescription(p,0,650)).build();dispatchGesture(g,null,null);}
