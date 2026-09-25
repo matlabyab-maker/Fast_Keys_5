@@ -47,6 +47,7 @@ public class FastKeysAccessibilityService extends AccessibilityService {
     private void move(float dx,float dy){ cursorX=Math.max(0,Math.min(screenW,cursorX+dx));cursorY=Math.max(0,Math.min(screenH,cursorY+dy));updatePos(); }
     public static void click(boolean right){ if(instance!=null)instance.tap(right); }
     public static void disable(){ if(instance!=null) instance.stopSelf(); }
+    public static void scrollToTop(){ if(instance!=null) instance.scrollTop(); }
     private void tap(boolean right){
         if(right){
             // Android has no universal right-click action in AccessibilityService; long-press is the closest portable action.
@@ -57,6 +58,22 @@ public class FastKeysAccessibilityService extends AccessibilityService {
         // clickable even when a browser does not expose them reliably to coordinate gestures.
         if (clickNodeAt(getRootInActiveWindow(), cursorX, cursorY)) return;
         clickAt(cursorX,cursorY);
+    }
+    private void scrollTop(){
+        AccessibilityNodeInfo root=getRootInActiveWindow();
+        if(root==null) return;
+        for(int pass=0; pass<24; pass++){
+            if(!scrollNodes(root)) break;
+        }
+    }
+    private boolean scrollNodes(AccessibilityNodeInfo node){
+        if(node==null) return false;
+        boolean moved=false;
+        try{
+            if(node.isScrollable()) moved |= node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD);
+            for(int i=0;i<node.getChildCount();i++) moved |= scrollNodes(node.getChild(i));
+        }catch(Exception ignored){}
+        return moved;
     }
     private boolean clickNodeAt(AccessibilityNodeInfo node, float x, float y){
         if(node==null) return false;

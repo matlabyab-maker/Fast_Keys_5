@@ -23,10 +23,6 @@ public class MainActivity extends Activity {
             if (android.os.Build.VERSION.SDK_INT >= 23) requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 903);
             return;
         }
-        if ("com.fastkeys1.REQUEST_RECORD_PERMISSION".equals(getIntent().getAction())) {
-            if (android.os.Build.VERSION.SDK_INT >= 23) requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 902);
-            return;
-        }
         if ("com.fastkeys1.START_MAGNIFIER".equals(getIntent().getAction())) {
             MediaProjectionManager mpm=(MediaProjectionManager)getSystemService(MEDIA_PROJECTION_SERVICE);
             if(mpm!=null) startActivityForResult(mpm.createScreenCaptureIntent(), 901);
@@ -85,14 +81,6 @@ public class MainActivity extends Activity {
             }
             finish();
             return;
-        }
-        if (requestCode == 902) {
-            if (grantResults.length > 0 && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                // The keyboard service will start its own separate recorder.
-                // If it is currently alive, start immediately.
-                try { FastKeysInputMethodService svc=FastKeysInputMethodService.getInstance(); if (svc != null) svc.startRecordingIfPermitted(); } catch (Exception ignored) {}
-            }
-            finish();
         }
     }
 

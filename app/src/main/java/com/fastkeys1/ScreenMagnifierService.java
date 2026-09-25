@@ -31,7 +31,6 @@ public class ScreenMagnifierService extends Service {
     @Override public void onCreate() {
         super.onCreate();
         createChannel();
-        startForeground(72, notification());
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
@@ -42,6 +41,7 @@ public class ScreenMagnifierService extends Service {
             MediaProjectionManager mpm=(MediaProjectionManager)getSystemService(MEDIA_PROJECTION_SERVICE);
             projection=mpm.getMediaProjection(resultCode,data);
             if(projection==null){stopSelf();return START_NOT_STICKY;}
+            if (Build.VERSION.SDK_INT >= 29) startForeground(72, notification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION); else startForeground(72, notification());
             startCapture();
         } catch(Exception e){ stopSelf(); }
         return START_NOT_STICKY;
@@ -98,9 +98,9 @@ public class ScreenMagnifierService extends Service {
                 c.drawBitmap(latest,srcRect,new RectF(0,0,getWidth(),getHeight()),paint);
             }else{paint.setColor(0xDDFFFFFF);c.drawCircle(cx,cy,cx-4,paint);}
             paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(dp(4)); paint.setColor(0xFF35CD37); c.drawCircle(cx,cy,Math.min(cx,cy)-3,paint); paint.setStyle(Paint.Style.FILL);
-            paint.setColor(0xCCFFFFFF); c.drawRoundRect(8,8,78,42,10,10,paint); c.drawRoundRect(getWidth()-78,8,getWidth()-8,42,10,10,paint); c.drawRoundRect(getWidth()/2f-35,8,getWidth()/2f+35,42,10,10,paint);
+            paint.setColor(0xCCFFFFFF); c.drawRoundRect(8,8,68,42,10,10,paint); c.drawRoundRect(getWidth()-68,8,getWidth()-8,42,10,10,paint); c.drawRoundRect(getWidth()/2f-35,8,getWidth()/2f+35,42,10,10,paint); c.drawRoundRect(getWidth()/2f-78,8,getWidth()/2f-40,42,10,10,paint);
             paint.setColor(Color.DKGRAY); paint.setTextSize(dp(16)); paint.setTextAlign(Paint.Align.CENTER);
-            c.drawText("×",43,31,paint); c.drawText("+",getWidth()-43,31,paint); c.drawText("×2",getWidth()/2f,31,paint);
+            c.drawText("×",38,31,paint); c.drawText("−",getWidth()/2f-59,31,paint); c.drawText("×2",getWidth()/2f,31,paint); c.drawText("+",getWidth()-38,31,paint);
         }
         @Override public boolean onTouchEvent(android.view.MotionEvent e){
             switch(e.getAction()){
@@ -109,8 +109,9 @@ public class ScreenMagnifierService extends Service {
                 case MotionEvent.ACTION_UP:
                     if(Math.hypot(e.getRawX()-downX,e.getRawY()-downY)<18){
                         float x=e.getX(), y=e.getY();
-                        if(y<55 && x<90){ stopSelf(); return true; }
-                        if(y<55 && x>getWidth()-90){ zoom=Math.min(5f,zoom+0.5f); invalidate(); return true; }
+                        if(y<55 && x<80){ stopSelf(); return true; }
+                        if(y<55 && x>getWidth()/2f-80 && x<getWidth()/2f-40){ zoom=Math.max(1f,zoom-0.5f); invalidate(); return true; }
+                        if(y<55 && x>getWidth()-80){ zoom=Math.min(6f,zoom+0.5f); invalidate(); return true; }
                         if(y<55 && x>getWidth()/2f-45 && x<getWidth()/2f+45){ zoom=2f; invalidate(); return true; }
                     }
                     return true;

@@ -17,18 +17,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.ArrayDeque;
 import android.os.SystemClock;
-import android.media.MediaRecorder;
 import android.widget.Toast;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
-import java.io.File;
 
 public class FastKeysInputMethodService extends InputMethodService {
     private static FastKeysInputMethodService instance;
     private FastKeysKeyboardView keyboard;
-    private MediaRecorder recorder;
-    private File recordingFile;
     private SpeechRecognizer speechRecognizer;
     private final LinkedList<String> clipboardHistory = new LinkedList<>();
     private ClipboardManager clipboardManager;
@@ -93,7 +89,6 @@ public class FastKeysInputMethodService extends InputMethodService {
     }
 
     @Override public void onDestroy() {
-        stopRecorder();
         if (speechRecognizer != null) { try { speechRecognizer.destroy(); } catch (Exception ignored) {} speechRecognizer = null; }
         if (instance == this) instance = null;
         if (clipboardManager != null && clipListener != null) clipboardManager.removePrimaryClipChangedListener(clipListener);
@@ -116,7 +111,7 @@ public class FastKeysInputMethodService extends InputMethodService {
     }
 
     public java.util.List<String> getClipboardHistory() { return new java.util.ArrayList<>(clipboardHistory); }
-    public void pasteHistory(String s) { if (s != null) { type(s); } }
+    public void pasteHistory(String s) { if (s != null && !s.isEmpty()) { typeUnit(s); } }
 
     @Override public void onStartInputView(android.view.inputmethod.EditorInfo info, boolean restarting) {
         super.onStartInputView(info, restarting);
@@ -130,61 +125,6 @@ public class FastKeysInputMethodService extends InputMethodService {
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
             startActivity(i);
         } catch (Exception ignored) {}
-    }
-
-    public static boolean isRecordingNow() { return instance != null && instance.recorder != null; }
-    public static FastKeysInputMethodService getInstance() { return instance; }
-
-    public void toggleRecorder() {
-        if (recorder != null) { stopRecorder(); return; }
-        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            try {
-                Intent i=new Intent(this, MainActivity.class);
-                i.setAction("com.fastkeys1.REQUEST_RECORD_PERMISSION");
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                startActivity(i);
-            } catch (Exception ignored) {}
-            return;
-        }
-        startRecorder();
-    }
-
-    public void startRecordingIfPermitted() {
-        if (recorder == null && android.os.Build.VERSION.SDK_INT >= 23 && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) startRecorder();
-    }
-
-    private void startRecorder() {
-        try {
-            File dir = getExternalFilesDir(android.os.Environment.DIRECTORY_MUSIC);
-            if (dir == null) dir = getFilesDir();
-            if (!dir.exists()) dir.mkdirs();
-            recordingFile = new File(dir, "FastKeys_" + new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(new java.util.Date()) + ".m4a");
-            recorder = new MediaRecorder();
-            recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-            recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-            recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-            recorder.setAudioEncodingBitRate(128000);
-            recorder.setAudioSamplingRate(44100);
-            recorder.setOutputFile(recordingFile.getAbsolutePath());
-            recorder.prepare();
-            recorder.start();
-            Toast.makeText(this, "ضبط Fast Keys شروع شد", Toast.LENGTH_SHORT).show();
-            if (keyboard != null) keyboard.invalidate();
-        } catch (Exception e) {
-            try { if (recordingFile != null) recordingFile.delete(); } catch (Exception ignored) {}
-            recorder = null; recordingFile = null;
-            Toast.makeText(this, "شروع ضبط ممکن نشد", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    public void stopRecorder() {
-        if (recorder == null) return;
-        try { recorder.stop(); } catch (Exception ignored) {}
-        try { recorder.reset(); recorder.release(); } catch (Exception ignored) {}
-        recorder = null;
-        if (recordingFile != null) Toast.makeText(this, "فایل ضبط شد: " + recordingFile.getName(), Toast.LENGTH_SHORT).show();
-        recordingFile = null;
-        if (keyboard != null) keyboard.invalidate();
     }
 
     public void requestQuickSettingsTiles() {
@@ -231,7 +171,7 @@ public class FastKeysInputMethodService extends InputMethodService {
                 }
                 public void onResults(android.os.Bundle results) {
                     java.util.ArrayList<String> r = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                    if (r != null && !r.isEmpty() && r.get(0) != null) type(r.get(0));
+                    if (r != null && !r.isEmpty() && r.get(0) != null) typeUnit(r.get(0));
                     if (speechRecognizer != null) { speechRecognizer.destroy(); speechRecognizer = null; }
                 }
                 public void onPartialResults(android.os.Bundle p) {}
@@ -275,8 +215,26 @@ public class FastKeysInputMethodService extends InputMethodService {
         InputConnection ic = getCurrentInputConnection();
         if (ic == null || s == null || s.isEmpty()) return;
         ic.commitText(s, 1);
-        pushUndo(s, "", true);
+        if (" ".equals(s) && lastTypeTime == 0L && !undoStack.isEmpty()) {
+            UndoOp old = undoStack.pop();
+            undoStack.push(new UndoOp(old.inserted + s, old.deleted));
+            lastTypeTime = SystemClock.uptimeMillis();
+            redoStack.clear();
+        } else {
+            pushUndo(s, "", true);
+        }
         if (isSentenceEnd(s)) lastTypeTime = 0L;
+        if (keyboard != null) keyboard.refreshSuggestions();
+    }
+
+    /** Inserts a complete logical unit (paste, emoji, symbol, voice result, Nastaliq board).
+     * It is intentionally NOT merged with ordinary character typing so one Undo removes the
+     * whole inserted unit rather than joining it to earlier text. */
+    public void typeUnit(String s) {
+        InputConnection ic = getCurrentInputConnection();
+        if (ic == null || s == null || s.isEmpty()) return;
+        ic.commitText(s, 1);
+        pushUndo(s, "", false);
         if (keyboard != null) keyboard.refreshSuggestions();
     }
 
@@ -379,6 +337,12 @@ public class FastKeysInputMethodService extends InputMethodService {
     }
 
     public void paste() {
+        try {
+            if (clipboardManager != null && clipboardManager.hasPrimaryClip()) {
+                ClipData d=clipboardManager.getPrimaryClip();
+                if(d!=null && d.getItemCount()>0){ CharSequence t=d.getItemAt(0).coerceToText(this); if(t!=null && t.length()>0){ typeUnit(t.toString()); return; } }
+            }
+        } catch(Exception ignored){}
         InputConnection ic = getCurrentInputConnection();
         if (ic != null) { ic.performContextMenuAction(android.R.id.paste); refresh(); }
     }
@@ -420,6 +384,11 @@ public class FastKeysInputMethodService extends InputMethodService {
         while (undoStack.size() > MAX_UNDO) undoStack.removeLast();
         lastTypeTime = 0L; lastDeleteTime = 0L;
         if (keyboard != null) keyboard.refreshSuggestions();
+    }
+
+    public void scrollToTop() {
+        if (FastKeysAccessibilityService.isEnabled()) FastKeysAccessibilityService.scrollToTop();
+        else { InputConnection ic=getCurrentInputConnection(); if(ic!=null) ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_MOVE_HOME)); if(ic!=null) ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP,KeyEvent.KEYCODE_MOVE_HOME)); }
     }
 
     public void escape() {
