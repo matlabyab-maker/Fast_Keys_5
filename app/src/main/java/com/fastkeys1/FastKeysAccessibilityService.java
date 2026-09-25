@@ -55,7 +55,7 @@ public class FastKeysAccessibilityService extends AccessibilityService {
         }
         // First try the actual accessibility node under the pointer. This makes web links/buttons
         // clickable even when a browser does not expose them reliably to coordinate gestures.
-        if (clickNodeAt(rootInActiveWindow, cursorX, cursorY)) return;
+        if (clickNodeAt(getRootInActiveWindow(), cursorX, cursorY)) return;
         clickAt(cursorX,cursorY);
     }
     private boolean clickNodeAt(AccessibilityNodeInfo node, float x, float y){
