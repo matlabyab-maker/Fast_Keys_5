@@ -75,6 +75,8 @@ public class FastKeysInputMethodService extends InputMethodService {
         captureClipboard();
     }
 
+    public static FastKeysInputMethodService getInstance() { return instance; }
+
     @Override public View onCreateInputView() {
         // Keep the IME in the normal bottom keyboard area instead of fullscreen/extract mode.
         keyboard = new FastKeysKeyboardView(this);
