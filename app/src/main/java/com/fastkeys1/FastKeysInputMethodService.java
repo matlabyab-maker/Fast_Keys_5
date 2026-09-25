@@ -89,6 +89,15 @@ public class FastKeysInputMethodService extends InputMethodService {
         } catch (Exception ignored) {}
     }
 
+    public void voiceAssist() {
+        InputConnection ic = getCurrentInputConnection();
+        if (ic == null) return;
+        try {
+            ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_VOICE_ASSIST));
+            ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_VOICE_ASSIST));
+        } catch (Exception ignored) {}
+    }
+
     public void showInputMethodPickerSafe() {
         try {
             InputMethodManager imm = (InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);

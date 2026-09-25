@@ -131,8 +131,9 @@ public class FastKeysKeyboardView extends View {
         Button history = drawerButton("تاریخچه کلیپ‌بورد (۱۰۰)");
         Button magnifierButton = drawerButton("ذره‌بین");
         Button resize = drawerButton("Resize / Float");
+        Button mouse = drawerButton("موس صفحه وب");
 
-        Button[] buttons={transparency,palette,emoji,emojiMaker,nastaliq,nastaliqKeyboard,steering,arabic,history,magnifierButton,resize};
+        Button[] buttons={transparency,palette,emoji,emojiMaker,nastaliq,nastaliqKeyboard,steering,arabic,history,magnifierButton,resize,mouse};
         for(Button b:buttons) list.addView(b);
 
         final PopupWindow popup = new PopupWindow(panel,
@@ -164,6 +165,7 @@ public class FastKeysKeyboardView extends View {
             service.launchScreenMagnifier();
         });
         resize.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showResizeFloatInfo));
+        mouse.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showMouseControls));
 
         popup.showAtLocation(this, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, dp(6));
         drawerOpen = true;
@@ -275,12 +277,21 @@ public class FastKeysKeyboardView extends View {
             for (int i=0;i<items.size();i++) {
                 final String item=items.get(i);
                 Button b=drawerButton((i+1)+"  "+item.replace("\n"," "));
-                b.setOnClickListener(v -> { service.pasteHistory(item); });
+                b.setOnClickListener(v -> {
+                    service.pasteHistory(item);
+                });
                 list.addView(b);
             }
         }
         scroll.addView(list); root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
-        new AlertDialog.Builder(service).setView(root).setNegativeButton("بستن",null).show();
+        Button close=drawerButton("بستن"); root.addView(close);
+        final PopupWindow popup=new PopupWindow(root, Math.min(dp(380), Math.max(dp(300), getWidth()-dp(16))), Math.min(dp(620), Math.max(dp(360), getHeight()-dp(16))), false);
+        popup.setBackgroundDrawable(new ColorDrawable(Color.WHITE));
+        popup.setTouchable(true); popup.setFocusable(false); popup.setOutsideTouchable(true);
+        popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED);
+        popup.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING); popup.setElevation(10f);
+        close.setOnClickListener(v -> popup.dismiss());
+        popup.showAtLocation(this, Gravity.CENTER, 0, 0);
     }
 
     private void showColorPalette() {
@@ -660,7 +671,7 @@ public class FastKeysKeyboardView extends View {
         gap=dp(3);
         // Six normal key rows plus a half-height suggestion row.
         keyH=(h-gap*8f)/6.5f;
-        suggestionH=keyH*0.5f;
+        suggestionH=keyH*0.62f;
 
         drawKeyboard(c);
 
@@ -688,7 +699,7 @@ public class FastKeysKeyboardView extends View {
         row(c,y,wt,top);
         float wtSum = 0f;
         for (float value : wt) wtSum += value;
-        drawMousePointer(c, gap, y, gap + wt[0] * ((w-gap*(wt.length+1))/wtSum), y + keyH);
+        drawMicrophone(c, gap, y, gap + wt[0] * ((w-gap*(wt.length+1))/wtSum), y + keyH);
 
         y+=keyH+gap;
         String[] sug=suggestions;
@@ -724,7 +735,7 @@ public class FastKeysKeyboardView extends View {
 
         y+=keyH+gap;
         String[] r5={"،","ژ","ذ","ز","د","چ","پ","و","ن","م","/\n؟"};
-        rowFromRightReserved(c,y,keyH,r5,enterW);
+        rowFromRightReservedWithEscape(c,y,keyH,r5,enterW);
         keyWithBackground(c,w-enterW,y-keyH-gap,w,y+keyH+gap,"Enter",NAVY,ENTER_BG,false);
 
         y+=keyH+gap;
@@ -768,6 +779,16 @@ public class FastKeysKeyboardView extends View {
             }
             x+=normalW+gap;
         }
+    }
+
+    private void drawMicrophone(Canvas c,float l,float t,float r,float b){
+        float cx=(l+r)/2f, cy=(t+b)/2f;
+        p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(Math.max(3f,keyH*.09f)); p.setStrokeCap(Paint.Cap.ROUND); p.setColor(NAVY);
+        c.drawRoundRect(cx-keyH*.13f, cy-keyH*.28f, cx+keyH*.13f, cy+keyH*.10f, keyH*.13f, keyH*.13f, p);
+        c.drawArc(cx-keyH*.25f, cy-keyH*.10f, cx+keyH*.25f, cy+keyH*.32f, 0, 180, false, p);
+        c.drawLine(cx, cy+keyH*.30f, cx, cy+keyH*.43f, p);
+        c.drawLine(cx-keyH*.15f, cy+keyH*.43f, cx+keyH*.15f, cy+keyH*.43f, p);
+        p.setStrokeCap(Paint.Cap.BUTT);
     }
 
     private void drawMousePointer(Canvas c,float l,float t,float r,float b){
@@ -820,6 +841,25 @@ public class FastKeysKeyboardView extends View {
         float x=left+gap;
         float available=getWidth()-left-reservedRight-gap;
         float ww=(available-gap*(labels.length+1))/labels.length;
+        for(String s:labels){
+            if(s.contains("\n")){
+                key(c,x,y,x+ww,y+keyH,"",BLUE,false);
+                String[] a=s.split("\n");
+                txt(c,a[0],x+ww/2,y+keyH*.35f,Math.min(20,keyH*.3f),NAVY);
+                txt(c,a[1],x+ww/2,y+keyH*.7f,Math.min(20,keyH*.3f),NAVY);
+            } else key(c,x,y,x+ww,y+keyH,s,BLUE,false);
+            x+=ww+gap;
+        }
+    }
+
+    private void rowFromRightReservedWithEscape(Canvas c,float y,float left,String[] labels,float reservedRight){
+        float x=left+gap;
+        float available=getWidth()-left-reservedRight-gap;
+        float escW=keyH*.70f;
+        float remaining=available-escW-gap;
+        float ww=(remaining-gap*(labels.length+1))/labels.length;
+        key(c,x,y,x+escW,y+keyH,"Escape",NAVY,false);
+        x+=escW+gap;
         for(String s:labels){
             if(s.contains("\n")){
                 key(c,x,y,x+ww,y+keyH,"",BLUE,false);
@@ -922,9 +962,12 @@ public class FastKeysKeyboardView extends View {
             float left=keyH;
             int count=11;
             float available=w-left-enterW-gap;
-            float cw=(available-gap*(count+1))/count;
-            int i=Math.max(0,Math.min(count-1,(int)((x-(left+gap))/(cw+gap))));
-            l=left+gap+i*(cw+gap);
+            float escW=keyH*.70f;
+            if(row==5 && x>=left+gap && x<left+gap+escW){setPressGlow(left+gap,t,left+gap+escW,b,held);return;}
+            float remaining=available-escW-gap;
+            float cw=(remaining-gap*(count+1))/count;
+            int i=Math.max(0,Math.min(count-1,(int)((x-(left+gap+escW+gap))/(cw+gap))));
+            l=left+gap+escW+gap+i*(cw+gap);
             setPressGlow(l,t,l+cw,b,held);
             return;
         }
@@ -960,6 +1003,7 @@ public class FastKeysKeyboardView extends View {
         }
 
         if(e.getAction()==MotionEvent.ACTION_DOWN){
+            stopRepeat();
             pressRectFor(x, y, true);
             handle(x,y);
             // A normal tap keeps its light briefly; Backspace keeps it lit while held.
@@ -995,13 +1039,13 @@ public class FastKeysKeyboardView extends View {
             for(int i=0;i<wt.length;i++){
                 float r=x0+unit*wt[i];
                 if(x>=x0 && x<r){
-                    if(i==0) showMouseControls();
+                    if(i==0) service.voiceAssist();
                     else if(i==1) service.copyAll();
                     else if(i==2) service.copyScreen();
                     else if(i==3) service.paste();
                     else if(i==4) service.cut();
-                    else if(i==5) service.undo();
-                    else if(i==6) service.redo();
+                    else if(i==5) { service.undo(); startUndoRepeat(); }
+                    else if(i==6) { service.redo(); startRedoRepeat(); }
                     else if(i==7) showClipboardHistory();
                     else if(i==8) showDrawer();
                     return;
@@ -1058,8 +1102,11 @@ public class FastKeysKeyboardView extends View {
             String[] shifted=(row==4)?new String[]{"ش","س","ی","ب","ل","ت","ا","ک","گ",":",">"}
                     :new String[]{"،","ژ","ذ","ز","د","چ","پ","و","ن","م","؟"};
             float available=w-left-enterW-gap;
-            float cw=(available-gap*(normal.length+1))/normal.length;
-            float x0=left+gap;
+            float escW=keyH*.70f;
+            if(row==5 && x>=left+gap && x<left+gap+escW){ service.escape(); return; }
+            float remaining=available-escW-gap;
+            float cw=(remaining-gap*(normal.length+1))/normal.length;
+            float x0=left+gap+escW+gap;
             for(int i=0;i<normal.length;i++){
                 if(x>=x0 && x<x0+cw){ service.type(caps ? shifted[i] : normal[i]); return; }
                 x0+=cw+gap;
@@ -1089,32 +1136,46 @@ public class FastKeysKeyboardView extends View {
     }
 
     private void showMouseControls(){
-        LinearLayout root=new LinearLayout(service); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(12,10,12,10);
-        TextView title=new TextView(service); title.setText("نشانگر موس / مکان‌نما"); title.setTextSize(20); title.setGravity(Gravity.CENTER); title.setTextColor(NAVY);
-        root.addView(title,new LinearLayout.LayoutParams(-1,54));
-        GridLayout grid=new GridLayout(service); grid.setColumnCount(3);
-        String[] labels={"↖","↑","↗","←","●","→","↙","↓","↘"};
-        for(int i=0;i<labels.length;i++){
-            Button b=new Button(service); b.setText(labels[i]); b.setTextSize(25); b.setTextColor(BLUE); b.setAllCaps(false);
-            final int index=i;
-            b.setOnClickListener(v->{
-                if(index==3) service.moveCursorHorizontal(-1);
-                else if(index==5) service.moveCursorHorizontal(1);
-                else if(index==1) service.move(KeyEvent.KEYCODE_DPAD_UP);
-                else if(index==7) service.move(KeyEvent.KEYCODE_DPAD_DOWN);
-                else if(index==0) { service.move(KeyEvent.KEYCODE_DPAD_UP); service.moveCursorHorizontal(-1); }
-                else if(index==2) { service.move(KeyEvent.KEYCODE_DPAD_UP); service.moveCursorHorizontal(1); }
-                else if(index==6) { service.move(KeyEvent.KEYCODE_DPAD_DOWN); service.moveCursorHorizontal(-1); }
-                else if(index==8) { service.move(KeyEvent.KEYCODE_DPAD_DOWN); service.moveCursorHorizontal(1); }
-            });
-            GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(58); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(2,2,2,2); grid.addView(b,lp);
-        }
-        root.addView(grid,new LinearLayout.LayoutParams(-1,dp(190)));
+        LinearLayout root=new LinearLayout(service); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(10,8,10,8);
+        TextView title=new TextView(service); title.setText("موس صفحه وب"); title.setTextSize(20); title.setGravity(Gravity.CENTER); title.setTextColor(NAVY);
+        root.addView(title,new LinearLayout.LayoutParams(-1,dp(48)));
+        TextView info=new TextView(service);
+        info.setText(FastKeysAccessibilityService.isEnabled() ? "پد را بکشید تا نشانگر موس حرکت کند. برای کلیک، دکمه چپ یا راست را بزنید." : "برای کار واقعی موس روی صفحات وب، ابتدا دسترسی «Fast Keys Mouse» را فعال کنید.");
+        info.setTextSize(14); info.setGravity(Gravity.CENTER); root.addView(info,new LinearLayout.LayoutParams(-1,dp(54)));
+        LinearLayout actions=new LinearLayout(service); actions.setGravity(Gravity.CENTER);
+        Button enable=new Button(service); enable.setText("فعال‌سازی موس"); enable.setAllCaps(false);
+        enable.setOnClickListener(v -> { try { service.startActivity(new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch(Exception ignored){} });
+        actions.addView(enable,new LinearLayout.LayoutParams(0,dp(50),1f));
+        root.addView(actions);
+        final MousePadView pad=new MousePadView(service);
+        root.addView(pad,new LinearLayout.LayoutParams(-1,0,1f));
+        LinearLayout clicks=new LinearLayout(service); clicks.setGravity(Gravity.CENTER);
+        Button left=drawerButton("کلیک چپ"); left.setOnClickListener(v->FastKeysAccessibilityService.click(false));
+        Button right=drawerButton("کلیک راست"); right.setOnClickListener(v->FastKeysAccessibilityService.click(true));
+        clicks.addView(left,new LinearLayout.LayoutParams(0,dp(54),1f)); clicks.addView(right,new LinearLayout.LayoutParams(0,dp(54),1f));
+        root.addView(clicks);
         Button close=drawerButton("بستن"); root.addView(close);
-        final PopupWindow popup=new PopupWindow(root,Math.min(dp(340),Math.max(dp(300),getWidth()-dp(20))),dp(330),false);
-        popup.setBackgroundDrawable(new ColorDrawable(Color.WHITE)); popup.setTouchable(true); popup.setFocusable(false); popup.setOutsideTouchable(true); popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED); popup.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING); popup.setElevation(10f);
-        close.setOnClickListener(v->popup.dismiss());
-        popup.showAtLocation(this,Gravity.CENTER,0,0);
+        final PopupWindow popup=new PopupWindow(root,Math.min(dp(390),Math.max(dp(310),getWidth()-dp(12))),Math.min(dp(600),Math.max(dp(420),getHeight()-dp(12))),false);
+        popup.setBackgroundDrawable(new ColorDrawable(Color.WHITE)); popup.setTouchable(true); popup.setFocusable(false); popup.setOutsideTouchable(true);
+        popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED); popup.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING); popup.setElevation(10f);
+        close.setOnClickListener(v->popup.dismiss()); popup.showAtLocation(this,Gravity.CENTER,0,0);
+    }
+
+    private class MousePadView extends View {
+        private final Paint mp=new Paint(Paint.ANTI_ALIAS_FLAG);
+        private float lastX,lastY;
+        MousePadView(Context c){super(c);setBackgroundColor(Color.rgb(245,247,250));}
+        @Override protected void onDraw(Canvas c){
+            super.onDraw(c); float w=getWidth(),h=getHeight();
+            mp.setStyle(Paint.Style.STROKE); mp.setStrokeWidth(dp(3)); mp.setColor(NAVY); c.drawRoundRect(dp(8),dp(8),w-dp(8),h-dp(8),dp(18),dp(18),mp);
+            mp.setStyle(Paint.Style.FILL); mp.setColor(Color.LTGRAY); c.drawCircle(w/2f,h/2f,dp(20),mp);
+            mp.setColor(NAVY); mp.setTextSize(dp(16)); mp.setTextAlign(Paint.Align.CENTER); c.drawText("حرکت نشانگر",w/2f,h/2f+dp(55),mp);
+        }
+        @Override public boolean onTouchEvent(MotionEvent e){
+            if(e.getAction()==MotionEvent.ACTION_DOWN){lastX=e.getX();lastY=e.getY();return true;}
+            if(e.getAction()==MotionEvent.ACTION_MOVE){float dx=e.getX()-lastX,dy=e.getY()-lastY;lastX=e.getX();lastY=e.getY();FastKeysAccessibilityService.movePointer(dx*1.8f,dy*1.8f);return true;}
+            return true;
+        }
     }
 
     private void showSymbolPicker(){
@@ -1140,10 +1201,19 @@ public class FastKeysKeyboardView extends View {
     private void startBackspace(){
         service.backspace();
         stopRepeat();
-        repeat=()->{
-            service.backspace();
-            handler.postDelayed(repeat,55);
-        };
+        repeat=()->{ service.backspace(); handler.postDelayed(repeat,55); };
+        handler.postDelayed(repeat,350);
+    }
+
+    private void startUndoRepeat(){
+        stopRepeat();
+        repeat=()->{ service.undo(); handler.postDelayed(repeat,80); };
+        handler.postDelayed(repeat,350);
+    }
+
+    private void startRedoRepeat(){
+        stopRepeat();
+        repeat=()->{ service.redo(); handler.postDelayed(repeat,80); };
         handler.postDelayed(repeat,350);
     }
 
