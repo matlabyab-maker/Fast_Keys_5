@@ -16,6 +16,7 @@ import java.util.LinkedList;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ArrayDeque;
+import android.os.SystemClock;
 
 public class FastKeysInputMethodService extends InputMethodService {
     private FastKeysKeyboardView keyboard;
@@ -24,12 +25,40 @@ public class FastKeysInputMethodService extends InputMethodService {
     private ClipboardManager.OnPrimaryClipChangedListener clipListener;
     private static final int MAX_HISTORY = 100;
     private static final int MAX_UNDO = 200;
+    private static final long TYPE_GROUP_MS = 1800L;
     private static class UndoOp {
         final String inserted;
         final String deleted;
-        UndoOp(String inserted, String deleted) { this.inserted = inserted; this.deleted = deleted; }
+        UndoOp(String inserted, String deleted) { this.inserted = inserted == null ? "" : inserted; this.deleted = deleted == null ? "" : deleted; }
     }
     private final ArrayDeque<UndoOp> undoStack = new ArrayDeque<>();
+    private final ArrayDeque<UndoOp> redoStack = new ArrayDeque<>();
+    private long lastTypeTime = 0L;
+    private long lastDeleteTime = 0L;
+    private boolean applyingHistory = false;
+
+    private void pushUndo(String inserted, String deleted, boolean mergeTyped) {
+        if (applyingHistory || ((inserted == null || inserted.isEmpty()) && (deleted == null || deleted.isEmpty()))) return;
+        long now = SystemClock.uptimeMillis();
+        if (mergeTyped && inserted != null && !inserted.isEmpty() && !undoStack.isEmpty() && now - lastTypeTime <= TYPE_GROUP_MS) {
+            UndoOp old = undoStack.pop();
+            undoStack.push(new UndoOp(old.inserted + inserted, old.deleted));
+        } else if (mergeTyped && deleted != null && !deleted.isEmpty() && !undoStack.isEmpty() && now - lastDeleteTime <= TYPE_GROUP_MS) {
+            UndoOp old = undoStack.pop();
+            undoStack.push(new UndoOp(old.inserted, old.deleted + deleted));
+        } else {
+            undoStack.push(new UndoOp(inserted, deleted));
+        }
+        while (undoStack.size() > MAX_UNDO) undoStack.removeLast();
+        redoStack.clear();
+        lastTypeTime = inserted != null && !inserted.isEmpty() ? now : 0L;
+        lastDeleteTime = deleted != null && !deleted.isEmpty() ? now : 0L;
+    }
+
+    private void pushRedo(UndoOp op) {
+        redoStack.push(op);
+        while (redoStack.size() > MAX_UNDO) redoStack.removeLast();
+    }
 
     @Override public void onCreate() {
         super.onCreate();
@@ -109,16 +138,15 @@ public class FastKeysInputMethodService extends InputMethodService {
         InputConnection ic = getCurrentInputConnection();
         if (ic == null || s == null || s.isEmpty()) return;
         ic.commitText(s, 1);
-        undoStack.push(new UndoOp(s, ""));
-        while (undoStack.size() > MAX_UNDO) undoStack.removeLast();
+        pushUndo(s, "", true);
         if (keyboard != null) keyboard.refreshSuggestions();
     }
 
     public void typeTo(InputConnection ic, String s) {
         if (ic == null || s == null || s.isEmpty()) return;
         ic.commitText(s, 1);
-        undoStack.push(new UndoOp(s, ""));
-        while (undoStack.size() > MAX_UNDO) undoStack.removeLast();
+        // A history/clipboard insertion is one complete undo unit.
+        pushUndo(s, "", false);
         if (keyboard != null) keyboard.refreshSuggestions();
     }
 
@@ -144,8 +172,7 @@ public class FastKeysInputMethodService extends InputMethodService {
         String deleted = (before == null || before.length() == 0) ? "" : before.subSequence(before.length()-1, before.length()).toString();
         ic.deleteSurroundingText(1, 0);
         if (!deleted.isEmpty()) {
-            undoStack.push(new UndoOp("", deleted));
-            while (undoStack.size() > MAX_UNDO) undoStack.removeLast();
+            pushUndo("", deleted, true);
         }
         if (keyboard != null) keyboard.refreshSuggestions();
     }
@@ -222,17 +249,39 @@ public class FastKeysInputMethodService extends InputMethodService {
         InputConnection ic = getCurrentInputConnection();
         if (ic == null || undoStack.isEmpty()) return;
         UndoOp op = undoStack.pop();
-        if (op.inserted != null && !op.inserted.isEmpty()) {
-            ic.deleteSurroundingText(op.inserted.length(), 0);
-        } else if (op.deleted != null && !op.deleted.isEmpty()) {
-            ic.commitText(op.deleted, 1);
+        applyingHistory = true;
+        try {
+            if (!op.inserted.isEmpty()) {
+                ic.deleteSurroundingText(op.inserted.length(), 0);
+            } else if (!op.deleted.isEmpty()) {
+                ic.commitText(op.deleted, 1);
+            }
+        } finally {
+            applyingHistory = false;
         }
+        pushRedo(op);
+        lastTypeTime = 0L; lastDeleteTime = 0L;
         if (keyboard != null) keyboard.refreshSuggestions();
     }
 
     public void redo() {
         InputConnection ic = getCurrentInputConnection();
-        if (ic != null) ic.performContextMenuAction(android.R.id.redo);
+        if (ic == null || redoStack.isEmpty()) return;
+        UndoOp op = redoStack.pop();
+        applyingHistory = true;
+        try {
+            if (!op.inserted.isEmpty()) {
+                ic.commitText(op.inserted, 1);
+            } else if (!op.deleted.isEmpty()) {
+                ic.deleteSurroundingText(op.deleted.length(), 0);
+            }
+        } finally {
+            applyingHistory = false;
+        }
+        undoStack.push(op);
+        while (undoStack.size() > MAX_UNDO) undoStack.removeLast();
+        lastTypeTime = 0L; lastDeleteTime = 0L;
+        if (keyboard != null) keyboard.refreshSuggestions();
     }
 
     public void escape() {

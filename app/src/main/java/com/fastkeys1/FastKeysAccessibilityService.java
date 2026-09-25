@@ -12,6 +12,7 @@ import android.view.Gravity;
 import android.view.WindowManager;
 import android.widget.TextView;
 import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
 
 public class FastKeysAccessibilityService extends AccessibilityService {
     private static FastKeysAccessibilityService instance;
@@ -45,11 +46,31 @@ public class FastKeysAccessibilityService extends AccessibilityService {
     public static void movePointer(float dx,float dy){ if(instance!=null) instance.move(dx,dy); }
     private void move(float dx,float dy){ cursorX=Math.max(0,Math.min(screenW,cursorX+dx));cursorY=Math.max(0,Math.min(screenH,cursorY+dy));updatePos(); }
     public static void click(boolean right){ if(instance!=null)instance.tap(right); }
+    public static void disable(){ if(instance!=null) instance.stopSelf(); }
     private void tap(boolean right){
         if(right){
-            // Android accessibility gestures have no universal right-click primitive; use a brief long press.
+            // Android has no universal right-click action in AccessibilityService; long-press is the closest portable action.
             longPress(cursorX,cursorY);
-        }else clickAt(cursorX,cursorY);
+            return;
+        }
+        // First try the actual accessibility node under the pointer. This makes web links/buttons
+        // clickable even when a browser does not expose them reliably to coordinate gestures.
+        if (clickNodeAt(rootInActiveWindow, cursorX, cursorY)) return;
+        clickAt(cursorX,cursorY);
+    }
+    private boolean clickNodeAt(AccessibilityNodeInfo node, float x, float y){
+        if(node==null) return false;
+        try{
+            android.graphics.Rect b=new android.graphics.Rect();
+            node.getBoundsInScreen(b);
+            if(b.contains((int)x,(int)y)){
+                if(node.isClickable() && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true;
+                for(int i=0;i<node.getChildCount();i++){
+                    if(clickNodeAt(node.getChild(i),x,y)) return true;
+                }
+            }
+        }catch(Exception ignored){}
+        return false;
     }
     private void clickAt(float x,float y){
         Path p=new Path();p.moveTo(x,y);GestureDescription g=new GestureDescription.Builder().addStroke(new GestureDescription.StrokeDescription(p,0,60)).build();dispatchGesture(g,null,null);

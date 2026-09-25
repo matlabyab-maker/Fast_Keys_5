@@ -46,7 +46,7 @@ public class FastKeysKeyboardView extends View {
     };
     private final int BG=Color.rgb(239,238,232), DEFAULT_KEY=Color.rgb(250,249,244),
             BLUE=Color.rgb(20,112,235), NAVY=Color.rgb(18,38,78), BLACK=Color.rgb(25,29,34),
-            GREEN=Color.rgb(45,205,55), ENTER_BG=Color.rgb(225,238,255), BACKSPACE_BG=Color.rgb(255,232,232), NUMBER_BG=Color.rgb(232,231,224);
+            GREEN=Color.rgb(45,205,55), ENTER_BG=Color.rgb(225,238,255), BACKSPACE_BG=Color.rgb(255,232,232), NUMBER_BG=Color.rgb(232,231,224), SPACE_BG=Color.rgb(190,155,30);
     private int KEY;
     private boolean nastaliqEnabled = false;
     private Typeface nastaliqTypeface;
@@ -748,7 +748,8 @@ public class FastKeysKeyboardView extends View {
         for(int i=0;i<b.length;i++){
             float cb=bw[i]*unitB;
             int tc=(i==0)?Color.RED:NAVY;
-            key(c,xb,y,xb+cb,y+keyH,b[i],tc,false);
+            int bg=(i==3)?SPACE_BG:KEY;
+            keyWithBackground(c,xb,y,xb+cb,y+keyH,b[i],tc,bg,false);
             xb+=cb+gap;
         }
     }
@@ -1156,6 +1157,9 @@ public class FastKeysKeyboardView extends View {
         Button right=drawerButton("کلیک راست"); right.setOnClickListener(v->FastKeysAccessibilityService.click(true));
         clicks.addView(left,new LinearLayout.LayoutParams(0,dp(54),1f)); clicks.addView(right,new LinearLayout.LayoutParams(0,dp(54),1f));
         root.addView(clicks);
+        Button stop=drawerButton("خاموش کردن موس");
+        stop.setOnClickListener(v -> FastKeysAccessibilityService.disable());
+        root.addView(stop);
         Button close=drawerButton("بستن"); root.addView(close);
         final PopupWindow popup=new PopupWindow(root,Math.min(dp(390),Math.max(dp(310),getWidth()-dp(12))),Math.min(dp(600),Math.max(dp(420),getHeight()-dp(12))),false);
         popup.setBackgroundDrawable(new ColorDrawable(Color.WHITE)); popup.setTouchable(true); popup.setFocusable(false); popup.setOutsideTouchable(true);
