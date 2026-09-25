@@ -19,6 +19,9 @@ import java.util.ArrayDeque;
 import android.os.SystemClock;
 import android.media.MediaRecorder;
 import android.widget.Toast;
+import android.speech.RecognitionListener;
+import android.speech.RecognizerIntent;
+import android.speech.SpeechRecognizer;
 import java.io.File;
 
 public class FastKeysInputMethodService extends InputMethodService {
@@ -26,6 +29,7 @@ public class FastKeysInputMethodService extends InputMethodService {
     private FastKeysKeyboardView keyboard;
     private MediaRecorder recorder;
     private File recordingFile;
+    private SpeechRecognizer speechRecognizer;
     private final LinkedList<String> clipboardHistory = new LinkedList<>();
     private ClipboardManager clipboardManager;
     private ClipboardManager.OnPrimaryClipChangedListener clipListener;
@@ -90,6 +94,7 @@ public class FastKeysInputMethodService extends InputMethodService {
 
     @Override public void onDestroy() {
         stopRecorder();
+        if (speechRecognizer != null) { try { speechRecognizer.destroy(); } catch (Exception ignored) {} speechRecognizer = null; }
         if (instance == this) instance = null;
         if (clipboardManager != null && clipListener != null) clipboardManager.removePrimaryClipChangedListener(clipListener);
         super.onDestroy();
@@ -180,6 +185,76 @@ public class FastKeysInputMethodService extends InputMethodService {
         if (recordingFile != null) Toast.makeText(this, "فایل ضبط شد: " + recordingFile.getName(), Toast.LENGTH_SHORT).show();
         recordingFile = null;
         if (keyboard != null) keyboard.invalidate();
+    }
+
+    public void requestQuickSettingsTiles() {
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            try {
+                android.app.PendingIntent result = android.app.PendingIntent.getActivity(this, 9101, new Intent(this, MainActivity.class), android.app.PendingIntent.FLAG_UPDATE_CURRENT | (android.os.Build.VERSION.SDK_INT >= 23 ? android.app.PendingIntent.FLAG_IMMUTABLE : 0));
+                android.graphics.Bitmap bm1 = android.graphics.Bitmap.createBitmap(64,64,android.graphics.Bitmap.Config.ARGB_8888);
+                android.graphics.Canvas c1 = new android.graphics.Canvas(bm1); android.graphics.Paint pp1 = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG); pp1.setColor(android.graphics.Color.WHITE); pp1.setTextSize(42); pp1.setTextAlign(android.graphics.Paint.Align.CENTER); c1.drawText("K",32,45,pp1);
+                android.graphics.Bitmap bm2 = android.graphics.Bitmap.createBitmap(64,64,android.graphics.Bitmap.Config.ARGB_8888);
+                android.graphics.Canvas c2 = new android.graphics.Canvas(bm2); android.graphics.Paint pp2 = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG); pp2.setColor(android.graphics.Color.WHITE); pp2.setTextSize(42); pp2.setTextAlign(android.graphics.Paint.Align.CENTER); c2.drawText("🚗",32,45,pp2);
+                android.service.quicksettings.TileService.requestAddTileService(this, new android.content.ComponentName(this, KeysTileService.class), "Fast Keys کیبورد", android.graphics.drawable.Icon.createWithBitmap(bm1), result);
+                android.service.quicksettings.TileService.requestAddTileService(this, new android.content.ComponentName(this, SteeringTileService.class), "فرمان ماشین", android.graphics.drawable.Icon.createWithBitmap(bm2), result);
+                android.widget.Toast.makeText(this, "درخواست افزودن دو کاشی Quick Settings ارسال شد", android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            } catch (Exception ignored) {}
+        }
+        try { startActivity(new Intent("android.settings.ACTION_QUICK_SETTINGS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception ignored) {}
+    }
+
+    public void voiceSearch(String languageTag) {
+        if (android.os.Build.VERSION.SDK_INT >= 23 && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            try {
+                Intent i = new Intent(this, MainActivity.class);
+                i.setAction("com.fastkeys1.REQUEST_VOICE_PERMISSION");
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                i.putExtra("language", languageTag);
+                startActivity(i);
+            } catch (Exception ignored) {}
+            return;
+        }
+        startVoiceSearchIfPermitted(languageTag);
+    }
+
+    public void startVoiceSearchIfPermitted(String languageTag) {
+        if (android.os.Build.VERSION.SDK_INT < 23 || checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) return;
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            Toast.makeText(this, "سرویس تشخیص گفتار روی دستگاه در دسترس نیست", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            if (speechRecognizer != null) { speechRecognizer.destroy(); speechRecognizer = null; }
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
+            speechRecognizer.setRecognitionListener(new RecognitionListener() {
+                public void onReadyForSpeech(android.os.Bundle p) {}
+                public void onBeginningOfSpeech() {}
+                public void onRmsChanged(float rms) {}
+                public void onBufferReceived(byte[] b) {}
+                public void onEndOfSpeech() {}
+                public void onError(int error) {
+                    if (speechRecognizer != null) { speechRecognizer.destroy(); speechRecognizer = null; }
+                    if (error != SpeechRecognizer.ERROR_NO_MATCH && error != SpeechRecognizer.ERROR_SPEECH_TIMEOUT) Toast.makeText(FastKeysInputMethodService.this, "تشخیص گفتار انجام نشد", Toast.LENGTH_SHORT).show();
+                }
+                public void onResults(android.os.Bundle results) {
+                    java.util.ArrayList<String> r = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
+                    if (r != null && !r.isEmpty() && r.get(0) != null) type(r.get(0));
+                    if (speechRecognizer != null) { speechRecognizer.destroy(); speechRecognizer = null; }
+                }
+                public void onPartialResults(android.os.Bundle p) {}
+                public void onEvent(int a, android.os.Bundle b) {}
+            });
+            Intent i = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            i.putExtra(RecognizerIntent.EXTRA_LANGUAGE, languageTag == null ? "fa-IR" : languageTag);
+            i.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 5);
+            speechRecognizer.startListening(i);
+            Toast.makeText(this, "اکنون صحبت کنید…", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            if (speechRecognizer != null) { speechRecognizer.destroy(); speechRecognizer = null; }
+            Toast.makeText(this, "شروع جستجوی صوتی ممکن نشد", Toast.LENGTH_SHORT).show();
+        }
     }
 
     public void voiceAssist() {

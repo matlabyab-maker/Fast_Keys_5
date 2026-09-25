@@ -19,6 +19,10 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
+        if ("com.fastkeys1.REQUEST_VOICE_PERMISSION".equals(getIntent().getAction())) {
+            if (android.os.Build.VERSION.SDK_INT >= 23) requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 903);
+            return;
+        }
         if ("com.fastkeys1.REQUEST_RECORD_PERMISSION".equals(getIntent().getAction())) {
             if (android.os.Build.VERSION.SDK_INT >= 23) requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 902);
             return;
@@ -75,6 +79,13 @@ public class MainActivity extends Activity {
 
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 903) {
+            if (grantResults.length > 0 && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                try { FastKeysInputMethodService svc=FastKeysInputMethodService.getInstance(); if (svc != null) svc.startVoiceSearchIfPermitted(getIntent().getStringExtra("language")); } catch (Exception ignored) {}
+            }
+            finish();
+            return;
+        }
         if (requestCode == 902) {
             if (grantResults.length > 0 && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 // The keyboard service will start its own separate recorder.
