@@ -188,20 +188,12 @@ public class FastKeysInputMethodService extends InputMethodService {
     }
 
     public void requestQuickSettingsTiles() {
-        if (android.os.Build.VERSION.SDK_INT >= 30) {
-            try {
-                android.app.PendingIntent result = android.app.PendingIntent.getActivity(this, 9101, new Intent(this, MainActivity.class), android.app.PendingIntent.FLAG_UPDATE_CURRENT | (android.os.Build.VERSION.SDK_INT >= 23 ? android.app.PendingIntent.FLAG_IMMUTABLE : 0));
-                android.graphics.Bitmap bm1 = android.graphics.Bitmap.createBitmap(64,64,android.graphics.Bitmap.Config.ARGB_8888);
-                android.graphics.Canvas c1 = new android.graphics.Canvas(bm1); android.graphics.Paint pp1 = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG); pp1.setColor(android.graphics.Color.WHITE); pp1.setTextSize(42); pp1.setTextAlign(android.graphics.Paint.Align.CENTER); c1.drawText("K",32,45,pp1);
-                android.graphics.Bitmap bm2 = android.graphics.Bitmap.createBitmap(64,64,android.graphics.Bitmap.Config.ARGB_8888);
-                android.graphics.Canvas c2 = new android.graphics.Canvas(bm2); android.graphics.Paint pp2 = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG); pp2.setColor(android.graphics.Color.WHITE); pp2.setTextSize(42); pp2.setTextAlign(android.graphics.Paint.Align.CENTER); c2.drawText("🚗",32,45,pp2);
-                android.service.quicksettings.TileService.requestAddTileService(this, new android.content.ComponentName(this, KeysTileService.class), "Fast Keys کیبورد", android.graphics.drawable.Icon.createWithBitmap(bm1), result);
-                android.service.quicksettings.TileService.requestAddTileService(this, new android.content.ComponentName(this, SteeringTileService.class), "فرمان ماشین", android.graphics.drawable.Icon.createWithBitmap(bm2), result);
-                android.widget.Toast.makeText(this, "درخواست افزودن دو کاشی Quick Settings ارسال شد", android.widget.Toast.LENGTH_SHORT).show();
-                return;
-            } catch (Exception ignored) {}
-        }
-        try { startActivity(new Intent("android.settings.ACTION_QUICK_SETTINGS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception ignored) {}
+        // Android does not expose a public API that lets an app silently add
+        // Quick Settings tiles. The two TileService entries are registered in
+        // the manifest; the user adds them from the system Quick Settings editor.
+        try {
+            startActivity(new Intent("android.settings.ACTION_QUICK_SETTINGS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        } catch (Exception ignored) {}
     }
 
     public void voiceSearch(String languageTag) {
