@@ -53,15 +53,39 @@ public class FastKeysAccessibilityService extends AccessibilityService {
     public static void scrollToTop(){ if(instance!=null) instance.scrollTop(); }
     private void tap(boolean right){ if(right){longPress(cursorX,cursorY);return;} if(clickNodeAt(getRootInActiveWindow(),cursorX,cursorY)) return; clickAt(cursorX,cursorY); }
     private void scrollTop(){
+        // First use the accessibility scroll action when the current app exposes a
+        // scrollable container. If the app (especially a WebView) does not expose
+        // one, repeatedly perform a long downward swipe. This reaches the top of
+        // very long web pages, documents and other scrollable screens.
         final int[] pass={0};
+        final int[] idle={0};
         final Runnable[] runner=new Runnable[1];
         runner[0]=() -> {
+            if(pass[0]++ >= 140 || idle[0] >= 8) return;
             AccessibilityNodeInfo root=getRootInActiveWindow();
-            if(root==null || pass[0]++ >= 45) return;
-            boolean moved=scrollNodes(root);
-            if(moved) handler.postDelayed(runner[0],70);
+            boolean moved=false;
+            if(root!=null) moved=scrollNodes(root);
+            // Always add a gesture fallback because many browsers/WebViews expose
+            // no useful AccessibilityNodeInfo scroll action.
+            if(!moved) idle[0]++; else idle[0]=0;
+            swipeDownToTop();
+            handler.postDelayed(runner[0],110);
         };
         handler.post(runner[0]);
+    }
+
+    private void swipeDownToTop(){
+        float x=Math.max(dp(30),Math.min(screenW-dp(30),screenW/2f));
+        float y1=Math.max(dp(80),screenH*0.22f);
+        float y2=Math.min(screenH-dp(100),screenH*0.88f);
+        if(y2<=y1) return;
+        Path p=new Path();
+        p.moveTo(x,y1);
+        p.lineTo(x,y2);
+        GestureDescription g=new GestureDescription.Builder()
+                .addStroke(new GestureDescription.StrokeDescription(p,0,520))
+                .build();
+        dispatchGesture(g,null,null);
     }
     private boolean scrollNodes(AccessibilityNodeInfo node){
         if(node==null)return false;
