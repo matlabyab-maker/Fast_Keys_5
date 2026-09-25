@@ -404,12 +404,6 @@ public class FastKeysKeyboardView extends View {
         GridLayout countryGrid=new GridLayout(service); countryGrid.setColumnCount(8); countryGrid.setPadding(4,2,4,2);
         addCountryFlags(countryGrid);
         all.addView(countryGrid,new LinearLayout.LayoutParams(-1,-2));
-        TextView folderTitle=new TextView(service); folderTitle.setText("پوشه‌های رنگی"); folderTitle.setTextColor(NAVY); folderTitle.setTextSize(15); folderTitle.setGravity(Gravity.CENTER);
-        all.addView(folderTitle,new LinearLayout.LayoutParams(-1,dp(34)));
-        GridLayout folderGrid=new GridLayout(service); folderGrid.setColumnCount(5); folderGrid.setPadding(8,2,8,8);
-        int[] folderColors={Color.rgb(245,195,45),Color.rgb(255,145,40),Color.rgb(235,70,70),Color.rgb(55,175,85),Color.rgb(45,125,220),Color.rgb(125,80,205),Color.rgb(235,80,155),Color.rgb(125,85,45),Color.rgb(80,85,95),Color.rgb(25,155,165)};
-        for(int color:folderColors) addColoredFolderButton(folderGrid,color);
-        all.addView(folderGrid,new LinearLayout.LayoutParams(-1,-2));
         scroll.addView(all,new ScrollView.LayoutParams(-1,-2));
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
         final PopupWindow popup=new PopupWindow(root,Math.min((int)(getWidth()*0.96f),720),Math.min(dp(620),Math.max(dp(380),getHeight()-dp(10))),false);
@@ -761,7 +755,7 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
         rowFromRightReserved(c,y,keyH,r4,enterW);
 
         y+=keyH+gap;
-        String[] r5=englishMode ? (caps ? new String[]{"Z","X","C","V","B","N","M","<",">","?","?"} : new String[]{"z","x","c","v","b","n","m",",",".","/","?"}) : new String[]{"ظ","ط","ز","ر","ذ","د","ئ","پ","و",".","،"};
+        String[] r5=englishMode ? (caps ? new String[]{"Z","X","C","V","B","N","M","<",">","?","?"} : new String[]{"z","x","c","v","b","n","m",",",".","/","?"}) : new String[]{"ظ","ط","ز","ر","ذ","د","ئ","پ","و","؟","،"};
         rowFromRightReservedWithEscape(c,y,keyH,r5,enterW);
         keyWithBackground(c,w-enterW,y-keyH-gap,w,y+keyH+gap,"Enter",NAVY,ENTER_BG,false);
 
@@ -1137,14 +1131,14 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
             if(row==4 && x<keyH){ service.move(KeyEvent.KEYCODE_DPAD_DOWN); return; }
             if(row==5 && x<keyH){ service.move(KeyEvent.KEYCODE_DPAD_UP); return; }
             String[] normal=englishMode ? (row==4?new String[]{"a","s","d","f","g","h","j","k","l",";","'"}:new String[]{"z","x","c","v","b","n","m",",",".","/","?"})
-                    : (row==4?new String[]{"ش","س","ی","ب","ل","ا","ت","ن","م","ک","گ"}:new String[]{"ظ","ط","ز","ر","ذ","د","ئ","پ","و",".","،"});
+                    : (row==4?new String[]{"ش","س","ی","ب","ل","ا","ت","ن","م","ک","گ"}:new String[]{"ظ","ط","ز","ر","ذ","د","ئ","پ","و","؟","،"});
             String[] shifted=englishMode ? (row==4?new String[]{"A","S","D","F","G","H","J","K","L",":","'"}:new String[]{"Z","X","C","V","B","N","M","<",">","?","?"})
-                    : (row==4?new String[]{"ش","س","ی","ب","ل","ا","ت","ن","م","ک","گ"}:new String[]{"ظ","ط","ز","ر","ذ","د","ئ","پ","و",".","،"});
+                    : (row==4?new String[]{"ش","س","ی","ب","ل","ا","ت","ن","م","ک","گ"}:new String[]{"ظ","ط","ز","ر","ذ","د","ئ","پ","و","؟","،"});
             float available=w-left-enterW-gap;
             float cw=(available-gap*(normal.length+1))/normal.length;
             float x0=left+gap;
             for(int i=0;i<normal.length;i++){
-                if(x>=x0 && x<x0+cw){ if(!englishMode && row==5 && i==normal.length-1){ service.type("،"); return; } if(englishMode){ service.typeEnglish(normal[i], caps); } else service.type(caps ? shifted[i] : normal[i]); return; }
+                if(x>=x0 && x<x0+cw){ if(!englishMode && row==5){ if(i==normal.length-1){ service.type("،"); return; } if(i==normal.length-2){ service.type("؟"); return; } } if(englishMode){ service.typeEnglish(normal[i], caps); } else service.type(caps ? shifted[i] : normal[i]); return; }
                 x0+=cw+gap;
             }
             return;
