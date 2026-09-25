@@ -721,8 +721,8 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
         float w=getWidth();
         float y=gap;
 
-        float[] wt={.55f,1.45f,1.55f,1.05f,1.0f,1.0f,1.0f,1.25f,.55f};
-        String[] top={"","Copy All","Copy Screen","Paste","Cut","Undo","Redo","100\nHistory","⌄"};
+        float[] wt={.55f,1.45f,1.55f,1.05f,1.0f,1.0f,1.0f,1.25f};
+        String[] top={"","Copy All","Copy Screen","Paste","Cut","Undo","Redo","100\nHistory"};
         row(c,y,wt,top);
         float wtSum = 0f;
         for (float value : wt) wtSum += value;
@@ -883,18 +883,22 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
     private void rowFromRightReservedWithEscape(Canvas c,float y,float left,String[] labels,float reservedRight){
         float x=left+gap;
         float available=getWidth()-left-reservedRight-gap;
-        float escW=keyH*.70f;
-        float remaining=available-escW-gap;
-        float ww=(remaining-gap*(labels.length+1))/labels.length;
-        key(c,x,y,x+escW,y+keyH,"Escape",NAVY,false);
-        x+=escW+gap;
+        float ww=(available-gap*(labels.length+1))/labels.length;
         for(String s:labels){
             if(s.contains("\n")){
                 key(c,x,y,x+ww,y+keyH,"",BLUE,false);
                 String[] a=s.split("\n");
-                txt(c,a[0],x+ww/2,y+keyH*.35f,Math.min(20,keyH*.3f),NAVY);
-                txt(c,a[1],x+ww/2,y+keyH*.7f,Math.min(20,keyH*.3f),NAVY);
-            } else key(c,x,y,x+ww,y+keyH,s,BLUE,false);
+                txt(c,a[0],x+ww/2,y+keyH*.35f,Math.min(18,keyH*.28f),NAVY);
+                txt(c,a[1],x+ww/2,y+keyH*.70f,Math.min(18,keyH*.28f),NAVY);
+            } else {
+                key(c,x,y,x+ww,y+keyH,s,BLUE,false);
+                // The second alphabet row uses a smaller, width-safe glyph size.
+                p.setTypeface(nastaliqEnabled && nastaliqTypeface != null ? nastaliqTypeface : Typeface.create("sans",Typeface.NORMAL));
+                p.setTextSize(nastaliqEnabled ? Math.min(13f,keyH*.23f) : Math.min(17f,keyH*.29f));
+                p.setColor(BLUE); p.setTextAlign(Paint.Align.CENTER);
+                c.save(); c.clipRect(x+2,y+2,x+ww-2,y+keyH-2);
+                c.drawText(s,x+ww/2,y+keyH/2-(p.ascent()+p.descent())/2,p); c.restore();
+            }
             x+=ww+gap;
         }
     }
@@ -979,7 +983,7 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
     private void pressRectFor(float x, float y, boolean held){
         float w=getWidth(); int row=getRowAt(y); if(row<0||row>6){clearPressGlowNow();return;}
         float t=rowTop(row),b=t+(row==1?suggestionH:keyH),l=gap,r;
-        if(row==0){float[] wt={.55f,1.45f,1.55f,1.05f,1,1,1,1.25f,.55f};float total=0;for(float q:wt)total+=q;float u=(w-gap*(wt.length+1))/total;for(int i=0;i<wt.length;i++){r=l+u*wt[i];if(x>=l&&x<r){setPressGlow(l,t,r,b,held);return;}l=r+gap;}return;}
+        if(row==0){float[] wt={.55f,1.45f,1.55f,1.05f,1,1,1,1.25f};float total=0;for(float q:wt)total+=q;float u=(w-gap*(wt.length+1))/total;for(int i=0;i<wt.length;i++){r=l+u*wt[i];if(x>=l&&x<r){setPressGlow(l,t,r,b,held);return;}l=r+gap;}return;}
         if(row==1){float cw=w/6f;int i=Math.max(0,Math.min(5,(int)(x/cw)));setPressGlow(i*cw,t,(i+1)*cw,b,held);return;}
         if(row==2){float[] wt={.55f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,.9f,1.45f};float total=0;for(float q:wt)total+=q;float u=(w-gap*(wt.length+1))/total;for(int i=0;i<wt.length;i++){r=l+u*wt[i];if(x>=l&&x<r){setPressGlow(l,t,r,b,held);return;}l=r+gap;}return;}
         if(row==3){
@@ -1000,12 +1004,9 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
                 float x0=left+gap;
                 for(int i=0;i<count;i++){ if(x>=x0&&x<x0+cw){setPressGlow(x0,t,x0+cw,b,held);return;} x0+=cw+gap; }
             } else {
-                float escW=keyH*.70f;
-                if(x>=left+gap && x<left+gap+escW){setPressGlow(left+gap,t,left+gap+escW,b,held);return;}
                 float available=w-left-enterW-gap;
-                float remaining=available-escW-gap;
-                float cw=(remaining-gap*(count+1))/count;
-                float x0=left+gap+escW+gap;
+                float cw=(available-gap*(count+1))/count;
+                float x0=left+gap;
                 for(int i=0;i<count;i++){ if(x>=x0&&x<x0+cw){setPressGlow(x0,t,x0+cw,b,held);return;} x0+=cw+gap; }
             }
             return;
@@ -1086,7 +1087,6 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
                     else if(i==5) { service.undo(); startUndoRepeat(); }
                     else if(i==6) { service.redo(); startRedoRepeat(); }
                     else if(i==7) showClipboardHistory();
-                    else if(i==8) showDrawer();
                     return;
                 }
                 x0=r+gap;
@@ -1141,11 +1141,8 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
             String[] shifted=englishMode ? (row==4?new String[]{"A","S","D","F","G","H","J","K","L",":","'"}:new String[]{"Z","X","C","V","B","N","M","<",">","?","?"})
                     : (row==4?new String[]{"ش","س","ی","ب","ل","ا","ت","ن","م","ک","گ"}:new String[]{"ظ","ط","ز","ر","ذ","د","ئ","پ","و",".","،"});
             float available=w-left-enterW-gap;
-            float escW=keyH*.70f;
-            if(row==5 && x>=left+gap && x<left+gap+escW){ service.escape(); return; }
-            float remaining=available-escW-gap;
-            float cw=(remaining-gap*(normal.length+1))/normal.length;
-            float x0=left+gap+escW+gap;
+            float cw=(available-gap*(normal.length+1))/normal.length;
+            float x0=left+gap;
             for(int i=0;i<normal.length;i++){
                 if(x>=x0 && x<x0+cw){ if(!englishMode && row==5 && i==normal.length-1){ service.type("،"); return; } if(englishMode){ service.typeEnglish(normal[i], caps); } else service.type(caps ? shifted[i] : normal[i]); return; }
                 x0+=cw+gap;
