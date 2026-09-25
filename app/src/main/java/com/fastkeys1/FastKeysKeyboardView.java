@@ -6,6 +6,8 @@ import android.graphics.drawable.ColorDrawable;
 import android.os.Handler;
 import android.view.*;
 import android.content.DialogInterface;
+import android.content.Context;
+import android.content.Intent;
 import android.widget.*;
 import java.util.*;
 
