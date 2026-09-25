@@ -68,7 +68,8 @@ public class FastKeysKeyboardView extends View {
 
     private void txt(Canvas c,String s,float x,float y,float size,int color){
         p.setTypeface(nastaliqEnabled && nastaliqTypeface != null ? nastaliqTypeface : Typeface.create("sans",Typeface.NORMAL));
-        p.setTextSize(size);
+        float fittedSize = (nastaliqEnabled && nastaliqTypeface != null) ? Math.min(size, 16f) : size;
+        p.setTextSize(fittedSize);
         p.setColor(color);
         p.setTextAlign(Paint.Align.CENTER);
         c.drawText(s,x,y-(p.ascent()+p.descent())/2,p);
@@ -212,14 +213,14 @@ public class FastKeysKeyboardView extends View {
         Button back = drawerButton("Backspace"); back.setTextSize(12);
         TextView title = new TextView(service);
         title.setText(titleText); title.setTextSize(16); title.setTextColor(NAVY); title.setGravity(Gravity.CENTER);
-        bar.addView(close, new LinearLayout.LayoutParams(dp(44), dp(34)));
-        bar.addView(space, new LinearLayout.LayoutParams(dp(68), dp(34)));
-        bar.addView(back, new LinearLayout.LayoutParams(dp(86), dp(34)));
-        bar.addView(title, new LinearLayout.LayoutParams(0, dp(34), 1f));
+        bar.addView(close, new LinearLayout.LayoutParams(dp(40), dp(28)));
+        bar.addView(space, new LinearLayout.LayoutParams(dp(62), dp(28)));
+        bar.addView(back, new LinearLayout.LayoutParams(dp(78), dp(28)));
+        bar.addView(title, new LinearLayout.LayoutParams(0, dp(28), 1f));
         space.setOnClickListener(v -> service.type(" "));
         back.setOnClickListener(v -> service.backspace());
         if (closeHolder != null && closeHolder.length > 0) closeHolder[0] = close;
-        root.addView(bar, new LinearLayout.LayoutParams(-1, dp(36)));
+        root.addView(bar, new LinearLayout.LayoutParams(-1, dp(30)));
         return bar;
     }
 
@@ -245,7 +246,7 @@ public class FastKeysKeyboardView extends View {
 
     private void enterResizeMode() {
         resizeMode = true;
-        invalidate();
+        postInvalidateOnAnimation();
     }
 
     private void exitResizeMode() {
@@ -276,6 +277,9 @@ public class FastKeysKeyboardView extends View {
         sizeBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar b,int progress,boolean fromUser){int v=minHeightDp+progress; sizeValue.setText(v+" dp"); applyKeyboardHeightDp(v);} public void onStartTrackingTouch(SeekBar b){} public void onStopTrackingTouch(SeekBar b){}});
         Button resize=new Button(service); resize.setText("تغییر اندازه با کشیدن گوشه"); root.addView(resize);
 
+        Button floatButton=new Button(service); floatButton.setText("Float — کیبورد شناور"); root.addView(floatButton);
+        Button stopFloat=new Button(service); stopFloat.setText("خاموش کردن Float"); root.addView(stopFloat);
+
         Button reset=new Button(service);
         reset.setText("Reset");
         reset.setOnClickListener(v -> {
@@ -292,6 +296,8 @@ public class FastKeysKeyboardView extends View {
         AlertDialog d=new AlertDialog.Builder(service).setView(root).create();
         headerClose[0].setOnClickListener(v -> d.dismiss());
         resize.setOnClickListener(v->{ enterResizeMode(); d.dismiss(); });
+        floatButton.setOnClickListener(v->{ service.startFloatingKeyboard(); d.dismiss(); });
+        stopFloat.setOnClickListener(v->{ service.stopFloatingKeyboard(); d.dismiss(); });
         okay.setOnClickListener(v->{ exitResizeMode(); d.dismiss(); });
         d.show();
     }
@@ -395,7 +401,10 @@ public class FastKeysKeyboardView extends View {
         for(String emoji:extraEmoji){ Button b=new Button(service); b.setText(emoji); b.setTextSize(24); b.setAllCaps(false); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(48); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(1,1,1,1); grid.addView(b,lp); b.setOnClickListener(v->service.type(emoji)); }
         String[] moreEmoji={"🦊","🐻‍❄️","🦥","🦦","🦨","🦡","🦫","🦔","🐾","🐣","🐥","🦎","🦧","🦍","🐅","🐆","🦓","🦣","🦒","🦘","🦙","🦛","🦏","🦚","🦜","🦩","🦢","🦤","🐋","🐬","🦭","🪼","🪸","🐚","🌵","🌴","🌲","🌳","🌾","🌷","🪻","🌹","🥀","🪷","🌺","🌸","🌼","🌻","🍄","🌰","🫘","🥜","🌽","🥦","🥬","🥒","🫑","🌶️","🫛","🥕","🧄","🧅","🥔","🍠","🥐","🥯","🥖","🥨","🧇","🥞","🧈","🍳","🥚","🧀","🥩","🍗","🍖","🌭","🍔","🍟","🍕","🫓","🥪","🥙","🧆","🌮","🌯","🥗","🍝","🍜","🍲","🍛","🍣","🍤","🥟","🦪","🍚","🍙","🍘","🍥","🍡","🍧","🍨","🍦","🥧","🧁","🍰","🎂","🍮","🍭","🍬","🍫","🍿","🧋","🍵","🫖","🍶","🍺","🍻","🥂","🍷","🥃","🍸","🍹","🧉","🍾","⚽","🏀","🏈","⚾","🥎","🎾","🏐","🏉","🥏","🎱","🪀","🏓","🏸","🏒","🏑","🥍","🏏","⛳","🪁","🏹","🎣","🤿","🥊","🥋","🛹","🛷","⛸️","🥌","🎿","⛷️","🏂","🪂","🏋️","🤸","🤼","🤽","🚴","🚵","🏊","🤽","🧗","🚗","🚕","🚙","🚌","🚎","🏎️","🚓","🚑","🚒","🚐","🛻","🚚","🚛","🚜","🛵","🏍️","🚲","🛴","✈️","🛫","🛬","🛩️","🚁","🚀","🛸","🚢","⛵","🛥️","🚤","⚓","🚉","🚆","🚇","🚊","🚝","🚞","🚋","🚌","🚦","🚥","🗺️","🧭","⌛","⏳","⏰","🕰️","📅","📆","🗓️","📌","📍","✂️","🖊️","🖋️","✒️","🖌️","🖍️","📐","📏","🔗","🔐","🔓","🔨","🪚","🪛","🔧","🪜","🧲","🔭","🔬","🧪","🧫","🧬","💡","🔦","🏮","🎃","🎁","🎀","🎗️","🎟️","🎫","🎖️","🏅","🎯","🎮","🕹️","🎰","🎲","🧩","♟️","🎵","🎶","🎼","🎷","🎺","🎸","🪕","🎻","🥁","📻","📺","📷","📹","📼","☎️","📞","📱","💻","🖥️","⌨️","🖱️","💿","💾","💽","🔋","🔌","🌐","🔎","🔍","🔑","🔒","🔔","🔕","❤️","🩷","🧡","💛","💚","🩵","💙","💜","🤎","🖤","🩶","🤍","💯","💢","💥","💦","💨","💫","💬","🗨️","🗯️","💭","💤"};
 for(String emoji:moreEmoji){ Button b=new Button(service); b.setText(emoji); b.setTextSize(24); b.setAllCaps(false); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(48); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(1,1,1,1); grid.addView(b,lp); b.setOnClickListener(v -> service.typeUnit(emoji)); }
-scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
+TextView countryTitle=new TextView(service); countryTitle.setText("پرچم کشورها و پوشه‌های رنگی"); countryTitle.setTextColor(NAVY); countryTitle.setTextSize(15); countryTitle.setGravity(Gravity.CENTER); root.addView(countryTitle,new LinearLayout.LayoutParams(-1,dp(30)));
+        GridLayout countryGrid=new GridLayout(service); countryGrid.setColumnCount(8); countryGrid.setPadding(4,2,4,2); addCountryAndFolderEmojis(countryGrid);
+        ScrollView countryScroll=new ScrollView(service); countryScroll.addView(countryGrid,new ScrollView.LayoutParams(-1,-2)); root.addView(countryScroll,new LinearLayout.LayoutParams(-1,dp(220)));
+        scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
         final PopupWindow popup=new PopupWindow(root,Math.min((int)(getWidth()*0.96f),720),Math.min(dp(520),Math.max(dp(300),getHeight()-dp(10))),false);
         popup.setBackgroundDrawable(new ColorDrawable(Color.WHITE)); popup.setTouchable(true); popup.setFocusable(false); popup.setOutsideTouchable(true); popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED); popup.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING); popup.setElevation(10f);
         headerClose[0].setOnClickListener(v->popup.dismiss());
@@ -410,7 +419,7 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
         for(String row : rows){
             LinearLayout line = new LinearLayout(service); line.setGravity(Gravity.CENTER); line.setOrientation(LinearLayout.HORIZONTAL);
             for(int i=0;i<row.length();i++){
-                final String ch=String.valueOf(row.charAt(i)); Button b=new Button(service); b.setText(ch); b.setTextSize(24); b.setTypeface(nastaliqTypeface);
+                final String ch=String.valueOf(row.charAt(i)); Button b=new Button(service); b.setText(ch); b.setTextSize(16); b.setTypeface(nastaliqTypeface); b.setPadding(0,0,0,0); b.setGravity(Gravity.CENTER);
                 b.setAllCaps(false); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(58),1f); lp.setMargins(2,2,2,2); line.addView(b,lp); b.setOnClickListener(v->{ service.typeUnit(ch); });
             }
             root.addView(line);
@@ -419,6 +428,29 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
         AlertDialog d = new AlertDialog.Builder(service).setView(root).create();
         headerClose[0].setOnClickListener(v -> d.dismiss());
         d.show();
+    }
+
+    private String flagFromCode(String code) {
+        if (code == null || code.length() != 2) return "";
+        code = code.toUpperCase(Locale.US);
+        int a = code.charAt(0) - 'A' + 0x1F1E6;
+        int b = code.charAt(1) - 'A' + 0x1F1E6;
+        return new String(Character.toChars(a)) + new String(Character.toChars(b));
+    }
+
+    private void addEmojiButton(GridLayout grid, String emoji) {
+        Button b=new Button(service); b.setText(emoji); b.setTextSize(24); b.setAllCaps(false); b.setPadding(0,0,0,0); b.setGravity(Gravity.CENTER);
+        GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(48); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(1,1,1,1); grid.addView(b,lp);
+        b.setOnClickListener(v -> service.typeUnit(emoji));
+    }
+
+    private void addCountryAndFolderEmojis(GridLayout grid) {
+        String[] countries={
+            "AF","AL","DZ","AS","AD","AO","AI","AQ","AG","AR","AM","AW","AU","AT","AZ","BS","BH","BD","BB","BY","BE","BZ","BJ","BM","BT","BO","BQ","BA","BW","BV","BR","IO","BN","BG","BF","BI","CV","KH","CM","CA","KY","CF","TD","CL","CN","CX","CC","CO","KM","CG","CD","CK","CR","CI","HR","CU","CW","CY","CZ","DK","DJ","DM","DO","EC","EG","SV","GQ","ER","EE","SZ","ET","FK","FO","FJ","FI","FR","GF","PF","TF","GA","GM","GE","DE","GH","GI","GR","GL","GD","GP","GU","GT","GG","GN","GW","GY","HT","HM","VA","HN","HK","HU","IS","IN","ID","IR","IQ","IE","IM","IL","IT","JM","JP","JE","JO","KZ","KE","KI","KP","KR","KW","KG","LA","LV","LB","LS","LR","LY","LI","LT","LU","MO","MG","MW","MY","MV","ML","MT","MH","MQ","MR","MU","YT","MX","FM","MD","MC","MN","ME","MS","MA","MZ","MM","NA","NR","NP","NL","NC","NZ","NI","NE","NG","NU","NF","MK","MP","NO","OM","PK","PW","PS","PA","PG","PY","PE","PH","PN","PL","PT","PR","QA","RE","RO","RU","RW","BL","SH","KN","LC","MF","PM","VC","WS","SM","ST","SA","SN","RS","SC","SL","SG","SX","SK","SI","SB","SO","ZA","GS","SS","ES","LK","SD","SR","SJ","SE","CH","SY","TW","TJ","TZ","TH","TL","TG","TK","TO","TT","TN","TR","TM","TC","TV","UG","UA","AE","GB","US","UM","UY","UZ","VU","VE","VN","VG","VI","WF","EH","YE","ZM","ZW"
+        };
+        for(String code:countries) addEmojiButton(grid, flagFromCode(code));
+        String[] folders={"📁","📂","🗂️","🗃️","🗄️","🗂","🗃","🗄","🟥📁","🟧📁","🟨📁","🟩📁","🟦📁","🟪📁","🟫📁","⬛📁","⬜📁","🩷📁","🩵📁","🩶📁","📁❤️","📁⭐","📁🔒","📁🔐","📁✨"};
+        for(String emoji:folders) addEmojiButton(grid, emoji);
     }
 
     private void showEmojiMaker() {
@@ -634,7 +666,7 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
         root.addView(preview,new LinearLayout.LayoutParams(-1,dp(100)));
         final String[] chars={"ا","ب","پ","ت","ث","ج","چ","ح","خ","د","ذ","ر","ز","ژ","س","ش","ص","ض","ط","ظ","ع","غ","ف","ق","ک","گ","ل","م","ن","و","ه","ی","ئ","ء","،","؛","؟",". "," ","آ","أ","إ","ؤ"};
         GridLayout grid=new GridLayout(service); grid.setColumnCount(8); ScrollView scroll=new ScrollView(service);
-        for(String ch:chars){ Button b=new Button(service); b.setText(ch.trim().isEmpty()?"Space":ch); b.setTextSize(20); b.setTypeface(nastaliqTypeface); b.setAllCaps(false); b.setOnClickListener(v->{ if(ch.equals(" ")) preview.append(" "); else preview.append(ch); }); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=58; lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(2,2,2,2); grid.addView(b,lp); }
+        for(String ch:chars){ Button b=new Button(service); b.setText(ch.trim().isEmpty()?"Space":ch); b.setTextSize(16); b.setTypeface(nastaliqTypeface); b.setPadding(0,0,0,0); b.setGravity(Gravity.CENTER); b.setAllCaps(false); b.setOnClickListener(v->{ if(ch.equals(" ")) preview.append(" "); else preview.append(ch); }); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=58; lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(2,2,2,2); grid.addView(b,lp); }
 scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
         LinearLayout actions=new LinearLayout(service);
         Button clear=drawerButton("پاک کردن"); clear.setOnClickListener(v->preview.setText(""));
@@ -659,7 +691,7 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
             p.setColor(NAVY);
             p.setStyle(Paint.Style.STROKE);
             p.setStrokeWidth(3);
-            float g = Math.min(28f, Math.min(w, h) * 0.06f);
+            float g = Math.min(42f, Math.min(w, h) * 0.10f);
             c.drawLine(w - g, h - 7, w - 7, h - g, p);
             c.drawLine(w - g - 7, h - 7, w - 7, h - g - 7, p);
             p.setStyle(Paint.Style.FILL);
@@ -853,7 +885,8 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
 
     private void drawArrow(Canvas c,float x,float y,float ww,float hh,String s){
         key(c,x,y,x+ww,y+hh,"",NAVY,true);
-        txt(c,s,x+ww/2,y+hh/2,hh*.55f,BLUE);
+        p.setTypeface(Typeface.DEFAULT_BOLD); p.setTextSize(hh*.62f); p.setColor(BLUE); p.setTextAlign(Paint.Align.CENTER);
+        p.setStyle(Paint.Style.FILL); c.drawText(s,x+ww/2,y+hh/2-(p.ascent()+p.descent())/2,p);
     }
 
     private void drawPressGlow(Canvas c){
@@ -970,7 +1003,7 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
         if (resizeMode) {
             if (e.getAction() == MotionEvent.ACTION_DOWN) {
                 float grip = Math.max(42f, dp(34));
-                if (x >= getWidth() - grip && y >= getHeight() - grip || y >= getHeight() - dp(70)) {
+                if ((x >= getWidth() - grip && y >= getHeight() - grip) || y >= getHeight() - dp(70)) {
                     resizingKeyboard = true;
                     resizeStartY = y;
                     resizeStartHeight = getHeight();
@@ -1076,7 +1109,7 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
             String[] normal=englishMode ? new String[]{"q","w","e","r","t","y","u","i","o","p","[","]","\\"} : new String[]{"ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","چ"};
             String[] shifted=englishMode ? new String[]{"Q","W","E","R","T","Y","U","I","O","P","{","}","|"} : new String[]{"ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","چ"};
             for(int i=0;i<13;i++){
-                if(x>=x0 && x<x0+normalW){ service.type(caps ? shifted[i] : normal[i]); return; }
+                if(x>=x0 && x<x0+normalW){ if(englishMode){ service.typeEnglish(normal[i], caps); } else service.type(caps ? shifted[i] : normal[i]); return; }
                 x0+=normalW+gap;
             }
             return;
@@ -1098,7 +1131,7 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
             float cw=(remaining-gap*(normal.length+1))/normal.length;
             float x0=left+gap+escW+gap;
             for(int i=0;i<normal.length;i++){
-                if(x>=x0 && x<x0+cw){ if(!englishMode && row==5 && i==normal.length-1){ service.type("،"); return; } service.type(caps ? shifted[i] : normal[i]); return; }
+                if(x>=x0 && x<x0+cw){ if(!englishMode && row==5 && i==normal.length-1){ service.type("،"); return; } if(englishMode){ service.typeEnglish(normal[i], caps); } else service.type(caps ? shifted[i] : normal[i]); return; }
                 x0+=cw+gap;
             }
             return;

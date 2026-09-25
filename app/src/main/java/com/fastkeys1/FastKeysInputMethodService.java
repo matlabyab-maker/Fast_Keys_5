@@ -138,6 +138,34 @@ public class FastKeysInputMethodService extends InputMethodService {
         } catch (Exception ignored) {}
     }
 
+    public void startFloatingKeyboard() {
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 23 && !android.provider.Settings.canDrawOverlays(this)) {
+                Toast.makeText(this, "ابتدا اجازه نمایش روی برنامه‌ها را فعال کنید", Toast.LENGTH_SHORT).show();
+                Intent i=new Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:"+getPackageName()));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); startActivity(i); return;
+            }
+            Intent i=new Intent(this, FloatingKeyboardOverlayService.class);
+            startService(i);
+        } catch(Exception e) { Toast.makeText(this,"شروع کیبورد شناور ممکن نشد",Toast.LENGTH_SHORT).show(); }
+    }
+
+    public void stopFloatingKeyboard() {
+        try { stopService(new Intent(this, FloatingKeyboardOverlayService.class)); } catch(Exception ignored) {}
+    }
+
+    public void typeEnglish(String letter, boolean forceUpper) {
+        if(letter==null || letter.isEmpty()) return;
+        String s=letter.substring(0,1);
+        if(forceUpper) { type(s.toUpperCase(java.util.Locale.US)); return; }
+        InputConnection ic=getCurrentInputConnection();
+        if(ic==null) return;
+        CharSequence before=ic.getTextBeforeCursor(80,0);
+        boolean startOfWord = before==null || before.length()==0 || Character.isWhitespace(before.charAt(before.length()-1));
+        String out=(startOfWord ? s.toUpperCase(java.util.Locale.US) : s.toLowerCase(java.util.Locale.US));
+        type(out);
+    }
+
     public void voiceSearch(String languageTag) {
         if (android.os.Build.VERSION.SDK_INT >= 23 && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             try {

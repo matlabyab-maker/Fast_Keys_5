@@ -13,6 +13,8 @@ import android.view.WindowManager;
 import android.widget.TextView;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.graphics.Bitmap;
+import android.hardware.HardwareBuffer;
 
 public class FastKeysAccessibilityService extends AccessibilityService {
     private static FastKeysAccessibilityService instance;
@@ -22,9 +24,9 @@ public class FastKeysAccessibilityService extends AccessibilityService {
     private int screenW, screenH;
     private float cursorX, cursorY;
     private final Handler handler=new Handler(Looper.getMainLooper());
+    private boolean screenshotBusy=false;
 
     public static boolean isEnabled(){ return instance!=null; }
-
     @Override protected void onServiceConnected(){
         super.onServiceConnected(); instance=this;
         wm=(WindowManager)getSystemService(WINDOW_SERVICE);
@@ -40,61 +42,43 @@ public class FastKeysAccessibilityService extends AccessibilityService {
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE|WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE|WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS|WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN, PixelFormat.TRANSLUCENT);
         lp.gravity=Gravity.TOP|Gravity.START; updatePos();
         try{wm.addView(cursor,lp);}catch(Exception ignored){}
+        sampleCursorBackground();
     }
     private int dp(float v){return (int)(v*getResources().getDisplayMetrics().density+0.5f);}
-    private void updatePos(){if(lp==null||wm==null)return;lp.x=Math.max(0,Math.min(screenW-dp(46),(int)cursorX-dp(23)));lp.y=Math.max(0,Math.min(screenH-dp(46),(int)cursorY-dp(23)));try{wm.updateViewLayout(cursor,lp);}catch(Exception ignored){}}
+    private void updatePos(){if(lp==null||wm==null)return;lp.x=Math.max(0,Math.min(screenW-dp(46),(int)cursorX-dp(23)));lp.y=Math.max(0,Math.min(screenH-dp(46),(int)cursorY-dp(23)));try{wm.updateViewLayout(cursor,lp);}catch(Exception ignored){} sampleCursorBackground();}
     public static void movePointer(float dx,float dy){ if(instance!=null) instance.move(dx,dy); }
     private void move(float dx,float dy){ cursorX=Math.max(0,Math.min(screenW,cursorX+dx));cursorY=Math.max(0,Math.min(screenH,cursorY+dy));updatePos(); }
     public static void click(boolean right){ if(instance!=null)instance.tap(right); }
     public static void disable(){ if(instance!=null) instance.stopSelf(); }
     public static void scrollToTop(){ if(instance!=null) instance.scrollTop(); }
-    private void tap(boolean right){
-        if(right){
-            // Android has no universal right-click action in AccessibilityService; long-press is the closest portable action.
-            longPress(cursorX,cursorY);
-            return;
-        }
-        // First try the actual accessibility node under the pointer. This makes web links/buttons
-        // clickable even when a browser does not expose them reliably to coordinate gestures.
-        if (clickNodeAt(getRootInActiveWindow(), cursorX, cursorY)) return;
-        clickAt(cursorX,cursorY);
-    }
-    private void scrollTop(){
-        AccessibilityNodeInfo root=getRootInActiveWindow();
-        if(root==null) return;
-        for(int pass=0; pass<24; pass++){
-            if(!scrollNodes(root)) break;
-        }
-    }
-    private boolean scrollNodes(AccessibilityNodeInfo node){
-        if(node==null) return false;
-        boolean moved=false;
-        try{
-            if(node.isScrollable()) moved |= node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD);
-            for(int i=0;i<node.getChildCount();i++) moved |= scrollNodes(node.getChild(i));
-        }catch(Exception ignored){}
-        return moved;
-    }
-    private boolean clickNodeAt(AccessibilityNodeInfo node, float x, float y){
-        if(node==null) return false;
-        try{
-            // Search children first so the smallest actual web button/link wins.
-            for(int i=node.getChildCount()-1;i>=0;i--){
-                if(clickNodeAt(node.getChild(i),x,y)) return true;
-            }
-            android.graphics.Rect b=new android.graphics.Rect();
-            node.getBoundsInScreen(b);
-            if(b.contains((int)x,(int)y) && node.isVisibleToUser() && node.isClickable()){
-                return node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-            }
-        }catch(Exception ignored){}
-        return false;
-    }
-    private void clickAt(float x,float y){
-        Path p=new Path();p.moveTo(x,y);GestureDescription g=new GestureDescription.Builder().addStroke(new GestureDescription.StrokeDescription(p,0,60)).build();dispatchGesture(g,null,null);
-    }
-    private void longPress(float x,float y){
-        Path p=new Path();p.moveTo(x,y);GestureDescription g=new GestureDescription.Builder().addStroke(new GestureDescription.StrokeDescription(p,0,650)).build();dispatchGesture(g,null,null);
+    private void tap(boolean right){ if(right){longPress(cursorX,cursorY);return;} if(clickNodeAt(getRootInActiveWindow(),cursorX,cursorY)) return; clickAt(cursorX,cursorY); }
+    private void scrollTop(){ AccessibilityNodeInfo root=getRootInActiveWindow(); if(root==null)return; for(int pass=0;pass<24;pass++){if(!scrollNodes(root))break;} }
+    private boolean scrollNodes(AccessibilityNodeInfo node){ if(node==null)return false; boolean moved=false; try{if(node.isScrollable())moved|=node.performAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD);for(int i=0;i<node.getChildCount();i++)moved|=scrollNodes(node.getChild(i));}catch(Exception ignored){}return moved; }
+    private boolean clickNodeAt(AccessibilityNodeInfo node,float x,float y){if(node==null)return false;try{for(int i=node.getChildCount()-1;i>=0;i--)if(clickNodeAt(node.getChild(i),x,y))return true;android.graphics.Rect b=new android.graphics.Rect();node.getBoundsInScreen(b);if(b.contains((int)x,(int)y)&&node.isVisibleToUser()&&node.isClickable())return node.performAction(AccessibilityNodeInfo.ACTION_CLICK);}catch(Exception ignored){}return false;}
+    private void clickAt(float x,float y){Path p=new Path();p.moveTo(x,y);GestureDescription g=new GestureDescription.Builder().addStroke(new GestureDescription.StrokeDescription(p,0,60)).build();dispatchGesture(g,null,null);}
+    private void longPress(float x,float y){Path p=new Path();p.moveTo(x,y);GestureDescription g=new GestureDescription.Builder().addStroke(new GestureDescription.StrokeDescription(p,0,650)).build();dispatchGesture(g,null,null);}
+    private void sampleCursorBackground(){
+        if(android.os.Build.VERSION.SDK_INT<30 || screenshotBusy || cursor==null) return;
+        screenshotBusy=true;
+        try {
+            takeScreenshot(android.view.Display.DEFAULT_DISPLAY, getMainExecutor(), new TakeScreenshotCallback(){
+                @Override public void onSuccess(ScreenshotResult result){
+                    try {
+                        HardwareBuffer hb=result.getHardwareBuffer();
+                        Bitmap bm=Bitmap.wrapHardwareBuffer(hb,result.getColorSpace());
+                        if(bm!=null){
+                            int bx=Math.max(0,Math.min(bm.getWidth()-1,(int)((cursorX+12)*bm.getWidth()/Math.max(1f,screenW))));
+                            int by=Math.max(0,Math.min(bm.getHeight()-1,(int)((cursorY+12)*bm.getHeight()/Math.max(1f,screenH))));
+                            int rgb=bm.getPixel(bx,by); float lum=(0.299f*Color.red(rgb)+0.587f*Color.green(rgb)+0.114f*Color.blue(rgb))/255f;
+                            int cc=lum>0.72f?Color.rgb(18,38,78):(lum<0.30f?Color.WHITE:Color.YELLOW);
+                            cursor.setTextColor(cc); bm.recycle();
+                        }
+                        hb.close();
+                    }catch(Exception ignored){} finally{screenshotBusy=false;}
+                }
+                @Override public void onFailure(int errorCode){screenshotBusy=false;}
+            });
+        }catch(Exception e){screenshotBusy=false;}
     }
     @Override public void onAccessibilityEvent(AccessibilityEvent event){}
     @Override public void onInterrupt(){}
