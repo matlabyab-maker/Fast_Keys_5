@@ -53,40 +53,43 @@ public class FastKeysAccessibilityService extends AccessibilityService {
     public static void scrollToTop(){ if(instance!=null) instance.scrollTop(); }
     private void tap(boolean right){ if(right){longPress(cursorX,cursorY);return;} if(clickNodeAt(getRootInActiveWindow(),cursorX,cursorY)) return; clickAt(cursorX,cursorY); }
     private void scrollTop(){
-        // First use the accessibility scroll action when the current app exposes a
-        // scrollable container. If the app (especially a WebView) does not expose
-        // one, repeatedly perform a long downward swipe. This reaches the top of
-        // very long web pages, documents and other scrollable screens.
+        // Run one scroll action at a time. The previous implementation started
+        // many 520ms gestures every 110ms, so most gestures were rejected while
+        // another gesture was still running. This version waits for each gesture
+        // to finish and then continues until the page is at its upper limit.
         final int[] pass={0};
-        final int[] idle={0};
         final Runnable[] runner=new Runnable[1];
         runner[0]=() -> {
-            if(pass[0]++ >= 140 || idle[0] >= 8) return;
-            AccessibilityNodeInfo root=getRootInActiveWindow();
+            if(pass[0]++ >= 120) return;
             boolean moved=false;
+            AccessibilityNodeInfo root=getRootInActiveWindow();
             if(root!=null) moved=scrollNodes(root);
-            // Always add a gesture fallback because many browsers/WebViews expose
-            // no useful AccessibilityNodeInfo scroll action.
-            if(!moved) idle[0]++; else idle[0]=0;
-            swipeDownToTop();
-            handler.postDelayed(runner[0],110);
+            // Keep the gesture fallback even when Accessibility exposes no
+            // scrollable node (common with browser WebViews).
+            swipeDownToTop(() -> {
+                if(pass[0] < 120) handler.postDelayed(runner[0], 80);
+            });
         };
         handler.post(runner[0]);
     }
 
-    private void swipeDownToTop(){
+    private void swipeDownToTop(final Runnable done){
         float x=Math.max(dp(30),Math.min(screenW-dp(30),screenW/2f));
-        float y1=Math.max(dp(80),screenH*0.22f);
-        float y2=Math.min(screenH-dp(100),screenH*0.88f);
-        if(y2<=y1) return;
+        float y1=Math.max(dp(90),screenH*0.20f);
+        float y2=Math.min(screenH-dp(110),screenH*0.86f);
+        if(y2<=y1){ done.run(); return; }
         Path p=new Path();
         p.moveTo(x,y1);
         p.lineTo(x,y2);
         GestureDescription g=new GestureDescription.Builder()
-                .addStroke(new GestureDescription.StrokeDescription(p,0,520))
+                .addStroke(new GestureDescription.StrokeDescription(p,0,480))
                 .build();
-        dispatchGesture(g,null,null);
+        dispatchGesture(g,new GestureResultCallback(){
+            @Override public void onCompleted(GestureDescription gestureDescription){ done.run(); }
+            @Override public void onCancelled(GestureDescription gestureDescription){ handler.postDelayed(done,180); }
+        },null);
     }
+
     private boolean scrollNodes(AccessibilityNodeInfo node){
         if(node==null)return false;
         boolean moved=false;
