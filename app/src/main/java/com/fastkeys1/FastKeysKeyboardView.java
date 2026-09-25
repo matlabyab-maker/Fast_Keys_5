@@ -50,8 +50,6 @@ public class FastKeysKeyboardView extends View {
             GREEN=Color.rgb(45,205,55), ENTER_BG=Color.rgb(225,238,255), BACKSPACE_BG=Color.rgb(255,232,232), NUMBER_BG=Color.rgb(232,231,224), SPACE_BG=Color.rgb(242,224,145);
     private boolean englishMode = false;
     private int KEY;
-    private boolean nastaliqEnabled = false;
-    private Typeface nastaliqTypeface;
 
     public FastKeysKeyboardView(FastKeysInputMethodService s){
         super(s);
@@ -59,17 +57,14 @@ public class FastKeysKeyboardView extends View {
         KEY = service.getSharedPreferences("fast_keys_settings", android.content.Context.MODE_PRIVATE)
                 .getInt("keyboard_key_color", DEFAULT_KEY);
         setBackgroundColor(BG);
-        try { nastaliqTypeface = Typeface.createFromAsset(getContext().getAssets(), "NotoNastaliqUrdu-Regular.ttf"); } catch (Exception ignored) { nastaliqTypeface = Typeface.create("serif", Typeface.NORMAL); }
-        nastaliqEnabled = service.getSharedPreferences("fast_keys_settings", 0).getBoolean("nastaliq", false);
         int savedAlpha = service.getSharedPreferences("fast_keys_settings", 0).getInt("keyboard_alpha", 100);
         setAlpha(Math.max(1, Math.min(100, savedAlpha)) / 100f);
         post(() -> applyKeyboardHeightDp(savedKeyboardHeightDp()));
     }
 
     private void txt(Canvas c,String s,float x,float y,float size,int color){
-        p.setTypeface(nastaliqEnabled && nastaliqTypeface != null ? nastaliqTypeface : Typeface.create("sans",Typeface.NORMAL));
-        float fittedSize = (nastaliqEnabled && nastaliqTypeface != null) ? Math.min(size, 16f) : size;
-        p.setTextSize(fittedSize);
+        p.setTypeface(Typeface.create("sans",Typeface.NORMAL));
+        p.setTextSize(size);
         p.setColor(color);
         p.setTextAlign(Paint.Align.CENTER);
         c.drawText(s,x,y-(p.ascent()+p.descent())/2,p);
@@ -131,9 +126,6 @@ public class FastKeysKeyboardView extends View {
         Button palette = drawerButton("رنگ کیبورد");
         Button emoji = drawerButton("انتخاب Emoji");
         Button emojiMaker = drawerButton("ساخت Emoji");
-        Button nastaliq = drawerButton(nastaliqEnabled ? "فونت نستعلیق: روشن" : "فونت نستعلیق: خاموش");
-        Button nastaliqKeyboard = drawerButton("کیبورد نستعلیق");
-        Button nastaliqBoard = drawerButton("تابلو نوشتاری نستعلیق");
         Button steering = drawerButton("فرمان ماشین");
         Button arabic = drawerButton("حرکت‌ها و صداهای عربی");
         Button history = drawerButton("تاریخچه کلیپ‌بورد (۱۰۰)");
@@ -143,7 +135,7 @@ public class FastKeysKeyboardView extends View {
 
         Button quickSettings = drawerButton("Quick Settings");
         Button topPage = drawerButton("بالای صفحه");
-        Button[] buttons={transparency,palette,emoji,emojiMaker,nastaliq,nastaliqKeyboard,nastaliqBoard,steering,arabic,history,magnifierButton,resize,mouse,quickSettings,topPage};
+        Button[] buttons={transparency,palette,emoji,emojiMaker,steering,arabic,history,magnifierButton,resize,mouse,quickSettings,topPage};
         for(Button b:buttons) list.addView(b);
 
         final PopupWindow popup = new PopupWindow(panel,
@@ -161,13 +153,6 @@ public class FastKeysKeyboardView extends View {
         palette.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showColorPalette));
         emoji.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showEmojiPicker));
         emojiMaker.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showEmojiMaker));
-        nastaliq.setOnClickListener(v -> {
-            nastaliqEnabled = !nastaliqEnabled;
-            service.getSharedPreferences("fast_keys_settings", 0).edit().putBoolean("nastaliq", nastaliqEnabled).apply();
-            popup.dismiss(); invalidate();
-        });
-        nastaliqKeyboard.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showNastaliqKeyboard));
-        nastaliqBoard.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showNastaliqWritingBoard));
         steering.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showSteeringWheel));
         arabic.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showArabicHarakat));
         history.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showClipboardHistory));
@@ -430,24 +415,7 @@ public class FastKeysKeyboardView extends View {
         @Override protected void onDraw(Canvas c){super.onDraw(c);float w=getWidth(),h=getHeight();float l=w*.18f,r=w*.82f,t=h*.28f,b=h*.72f;fp.setColor(color);fp.setStyle(Paint.Style.FILL);Path path=new Path();path.moveTo(l,t+h*.06f);path.lineTo(l+w*.20f,t+h*.06f);path.lineTo(l+w*.28f,t);path.lineTo(l+w*.48f,t);path.lineTo(l+w*.55f,t+h*.10f);path.lineTo(r,t+h*.10f);path.lineTo(r,b);path.lineTo(l,b);path.close();c.drawPath(path,fp);fp.setColor(Color.argb(70,255,255,255));c.drawRect(l+w*.06f,t+h*.16f,r-w*.06f,t+h*.22f,fp);}
     }
 
-    private void showNastaliqKeyboard() {
-        final String[] rows = {"ضصثقفغعهخحجچ","شسیبلتاکگمنپ","ظطزرذدئؤء،؟"};
-        LinearLayout root = new LinearLayout(service); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(8,8,8,8);
-        final Button[] headerClose = new Button[1];
-        addPopupHeader(root, "کیبورد نستعلیق", headerClose);
-        for(String row : rows){
-            LinearLayout line = new LinearLayout(service); line.setGravity(Gravity.CENTER); line.setOrientation(LinearLayout.HORIZONTAL);
-            for(int i=0;i<row.length();i++){
-                final String ch=String.valueOf(row.charAt(i)); Button b=new Button(service); b.setText(ch); b.setTextSize(16); b.setTypeface(nastaliqTypeface); b.setPadding(0,0,0,0); b.setGravity(Gravity.CENTER);
-                b.setAllCaps(false); LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(58),1f); lp.setMargins(2,2,2,2); line.addView(b,lp); b.setOnClickListener(v->{ service.typeUnit(ch); });
-            }
-            root.addView(line);
-        }
-        Button space=drawerButton("Space"); space.setOnClickListener(v->service.type(" ")); root.addView(space);
-        AlertDialog d = new AlertDialog.Builder(service).setView(root).create();
-        headerClose[0].setOnClickListener(v -> d.dismiss());
-        d.show();
-    }
+
 
     private String flagFromCode(String code) {
         if (code == null || code.length() != 2) return "";
@@ -668,23 +636,7 @@ public class FastKeysKeyboardView extends View {
         headerClose[0].setOnClickListener(v->popup.dismiss()); popup.showAtLocation(this,Gravity.CENTER,0,0);
     }
 
-    private void showNastaliqWritingBoard(){
-        final LinearLayout root=new LinearLayout(service); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(12,10,12,10);
-        final Button[] headerClose = new Button[1];
-        addPopupHeader(root, "تابلو نوشتاری نستعلیق", headerClose);
-        final TextView preview=new TextView(service); preview.setTypeface(nastaliqTypeface); preview.setTextSize(30); preview.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL); preview.setPadding(12,8,12,8); preview.setTextColor(NAVY); preview.setBackgroundColor(Color.rgb(248,246,238));
-        root.addView(preview,new LinearLayout.LayoutParams(-1,dp(100)));
-        final String[] chars={"ا","ب","پ","ت","ث","ج","چ","ح","خ","د","ذ","ر","ز","ژ","س","ش","ص","ض","ط","ظ","ع","غ","ف","ق","ک","گ","ل","م","ن","و","ه","ی","ئ","ء","،","؛","؟",". "," ","آ","أ","إ","ؤ"};
-        GridLayout grid=new GridLayout(service); grid.setColumnCount(8); ScrollView scroll=new ScrollView(service);
-        for(String ch:chars){ Button b=new Button(service); b.setText(ch.trim().isEmpty()?"Space":ch); b.setTextSize(16); b.setTypeface(nastaliqTypeface); b.setPadding(0,0,0,0); b.setGravity(Gravity.CENTER); b.setAllCaps(false); b.setOnClickListener(v->{ if(ch.equals(" ")) preview.append(" "); else preview.append(ch); }); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=58; lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(2,2,2,2); grid.addView(b,lp); }
-scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
-        LinearLayout actions=new LinearLayout(service);
-        Button clear=drawerButton("پاک کردن"); clear.setOnClickListener(v->preview.setText(""));
-        Button insert=drawerButton("درج در متن"); insert.setOnClickListener(v->{String s=preview.getText().toString(); if(!s.isEmpty()) service.typeUnit(s);});
-        actions.addView(clear,new LinearLayout.LayoutParams(0,58,1f)); actions.addView(insert,new LinearLayout.LayoutParams(0,58,1f)); root.addView(actions);
-        PopupWindow popup=new PopupWindow(root,Math.min(dp(430),Math.max(dp(320),getWidth()-dp(10))),Math.min(dp(650),Math.max(dp(450),getHeight()-dp(10))),false);
-        popup.setBackgroundDrawable(new ColorDrawable(Color.WHITE)); popup.setTouchable(true); popup.setFocusable(false); popup.setOutsideTouchable(true); popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED); popup.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING); popup.setElevation(10f); headerClose[0].setOnClickListener(v->popup.dismiss()); popup.showAtLocation(this,Gravity.CENTER,0,0);
-    }
+
 
     @Override protected void onDraw(Canvas c){
         super.onDraw(c);
@@ -715,8 +667,8 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
         float w=getWidth();
         float y=gap;
 
-        float[] wt={.55f,1.45f,1.55f,1.05f,1.0f,1.0f,1.0f,1.25f};
-        String[] top={"","Copy All","Copy Screen","Paste","Cut","Undo","Redo","100\nHistory"};
+        float[] wt={.55f,1.45f,1.55f,1.05f,1.0f,1.0f,1.0f,1.25f,1.05f};
+        String[] top={"","Copy All","Copy Screen","Paste","Cut","Undo","Redo","100\nHistory","امکانات"};
         row(c,y,wt,top);
         float wtSum = 0f;
         for (float value : wt) wtSum += value;
@@ -792,10 +744,8 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
         String[] letters=englishMode ? (caps ? new String[]{"Q","W","E","R","T","Y","U","I","O","P","{","}","|"} : new String[]{"q","w","e","r","t","y","u","i","o","p","[","]","\\"}) : new String[]{"ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","چ"};
         for(String s:letters){
             key(c,x,y,x+normalW,y+keyH,"",BLUE,false);
-            // Fit the first alphabet row strictly inside each key.  Nastaliq has tall
-            // glyph metrics, so width and height are both constrained and the canvas
-            // is clipped to the key's inner bounds.
-            p.setTypeface(nastaliqEnabled && nastaliqTypeface != null ? nastaliqTypeface : Typeface.create("sans",Typeface.NORMAL));
+            // Fit the alphabet glyph strictly inside each key.
+            p.setTypeface(Typeface.create("sans",Typeface.NORMAL));
             float maxSize = Math.min(20f, keyH*.30f);
             float minSize = 9f;
             float size = maxSize;
@@ -898,8 +848,8 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
             } else {
                 key(c,x,y,x+ww,y+keyH,s,BLUE,false);
                 // The second alphabet row uses a smaller, width-safe glyph size.
-                p.setTypeface(nastaliqEnabled && nastaliqTypeface != null ? nastaliqTypeface : Typeface.create("sans",Typeface.NORMAL));
-                p.setTextSize(nastaliqEnabled ? Math.min(13f,keyH*.23f) : Math.min(17f,keyH*.29f));
+                p.setTypeface(Typeface.create("sans",Typeface.NORMAL));
+                p.setTextSize(Math.min(17f,keyH*.29f));
                 p.setColor(BLUE); p.setTextAlign(Paint.Align.CENTER);
                 c.save(); c.clipRect(x+2,y+2,x+ww-2,y+keyH-2);
                 c.drawText(s,x+ww/2,y+keyH/2-(p.ascent()+p.descent())/2,p); c.restore();
@@ -1092,6 +1042,7 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
                     else if(i==5) { service.undo(); startUndoRepeat(); }
                     else if(i==6) { service.redo(); startRedoRepeat(); }
                     else if(i==7) showClipboardHistory();
+                    else if(i==8) showDrawer();
                     return;
                 }
                 x0=r+gap;

@@ -257,7 +257,7 @@ public class FastKeysInputMethodService extends InputMethodService {
         if (keyboard != null) keyboard.refreshSuggestions();
     }
 
-    /** Inserts a complete logical unit (paste, emoji, symbol, voice result, Nastaliq board).
+    /** Inserts a complete logical unit (paste, emoji, symbol, voice result).
      * It is intentionally NOT merged with ordinary character typing so one Undo removes the
      * whole inserted unit rather than joining it to earlier text. */
     public void typeUnit(String s) {
