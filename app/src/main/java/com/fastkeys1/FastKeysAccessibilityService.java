@@ -53,36 +53,38 @@ public class FastKeysAccessibilityService extends AccessibilityService {
     public static void scrollToTop(){ if(instance!=null) instance.scrollTop(); }
     private void tap(boolean right){ if(right){longPress(cursorX,cursorY);return;} if(clickNodeAt(getRootInActiveWindow(),cursorX,cursorY)) return; clickAt(cursorX,cursorY); }
     private void scrollTop(){
-        // Run one scroll action at a time. The previous implementation started
-        // many 520ms gestures every 110ms, so most gestures were rejected while
-        // another gesture was still running. This version waits for each gesture
-        // to finish and then continues until the page is at its upper limit.
+        // First use every scrollable accessibility container. Browser/WebView
+        // pages often expose a scrollable node even when the visible page is
+        // not a normal Android list. We repeat the action with a delay so the
+        // target has time to update its scroll position.
         final int[] pass={0};
         final Runnable[] runner=new Runnable[1];
         runner[0]=() -> {
-            if(pass[0]++ >= 120) return;
-            boolean moved=false;
+            if(pass[0]++ >= 80) return;
             AccessibilityNodeInfo root=getRootInActiveWindow();
-            if(root!=null) moved=scrollNodes(root);
-            // Keep the gesture fallback even when Accessibility exposes no
-            // scrollable node (common with browser WebViews).
-            swipeDownToTop(() -> {
-                if(pass[0] < 120) handler.postDelayed(runner[0], 80);
-            });
+            boolean moved=scrollNodes(root);
+            if(moved){
+                handler.postDelayed(runner[0],120);
+            }else{
+                // WebViews and some editors do not expose scroll actions.
+                // Send a real downward finger swipe (finger moves down =>
+                // document moves toward its beginning), one gesture at a time.
+                swipeDownToTop(() -> handler.postDelayed(runner[0],120));
+            }
         };
         handler.post(runner[0]);
     }
 
     private void swipeDownToTop(final Runnable done){
         float x=Math.max(dp(30),Math.min(screenW-dp(30),screenW/2f));
-        float y1=Math.max(dp(90),screenH*0.20f);
-        float y2=Math.min(screenH-dp(110),screenH*0.86f);
+        float y1=Math.max(dp(100),screenH*0.18f);
+        float y2=Math.min(screenH-dp(140),screenH*0.88f);
         if(y2<=y1){ done.run(); return; }
         Path p=new Path();
         p.moveTo(x,y1);
         p.lineTo(x,y2);
         GestureDescription g=new GestureDescription.Builder()
-                .addStroke(new GestureDescription.StrokeDescription(p,0,480))
+                .addStroke(new GestureDescription.StrokeDescription(p,0,650))
                 .build();
         dispatchGesture(g,new GestureResultCallback(){
             @Override public void onCompleted(GestureDescription gestureDescription){ done.run(); }
