@@ -791,14 +791,25 @@ scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f)
 
         String[] letters=englishMode ? (caps ? new String[]{"Q","W","E","R","T","Y","U","I","O","P","{","}","|"} : new String[]{"q","w","e","r","t","y","u","i","o","p","[","]","\\"}) : new String[]{"ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","چ"};
         for(String s:letters){
-            if(s.contains("\n")){
-                key(c,x,y,x+normalW,y+keyH,"",NAVY,false);
-                String[] a=s.split("\\n");
-                txt(c,a[0],x+normalW/2,y+keyH*.35f,Math.min(20,keyH*.3f),NAVY);
-                txt(c,a[1],x+normalW/2,y+keyH*.7f,Math.min(20,keyH*.3f),NAVY);
-            }else{
-                key(c,x,y,x+normalW,y+keyH,s,BLUE,false);
+            key(c,x,y,x+normalW,y+keyH,"",BLUE,false);
+            // Fit the first alphabet row strictly inside each key.  Nastaliq has tall
+            // glyph metrics, so width and height are both constrained and the canvas
+            // is clipped to the key's inner bounds.
+            p.setTypeface(nastaliqEnabled && nastaliqTypeface != null ? nastaliqTypeface : Typeface.create("sans",Typeface.NORMAL));
+            float maxSize = Math.min(20f, keyH*.30f);
+            float minSize = 9f;
+            float size = maxSize;
+            float maxWidth = Math.max(8f, normalW-6f);
+            while(size > minSize){
+                p.setTextSize(size);
+                if(p.measureText(s) <= maxWidth && (p.descent()-p.ascent()) <= keyH-6f) break;
+                size -= 0.5f;
             }
+            p.setColor(BLUE); p.setTextAlign(Paint.Align.CENTER); p.setStyle(Paint.Style.FILL);
+            c.save();
+            c.clipRect(x+3,y+3,x+normalW-3,y+keyH-3);
+            c.drawText(s,x+normalW/2,y+keyH/2-(p.ascent()+p.descent())/2,p);
+            c.restore();
             x+=normalW+gap;
         }
     }
