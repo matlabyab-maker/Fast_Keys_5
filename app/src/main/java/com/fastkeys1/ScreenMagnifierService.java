@@ -23,6 +23,8 @@ public class ScreenMagnifierService extends Service {
     private LensView lens;
     private WindowManager.LayoutParams lp;
     private Bitmap latest;
+    private int captureW, captureH;
+    private float zoom=2.0f;
     private int screenW, screenH, densityDpi;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
@@ -51,7 +53,7 @@ public class ScreenMagnifierService extends Service {
         wm.getDefaultDisplay().getRealMetrics(dm);
         screenW=dm.widthPixels; screenH=dm.heightPixels; densityDpi=dm.densityDpi;
         int rw=Math.max(360, screenW/2), rh=Math.max(640, screenH/2);
-        reader=ImageReader.newInstance(rw,rh,PixelFormat.RGBA_8888,2);
+        captureW=rw; captureH=rh; reader=ImageReader.newInstance(rw,rh,PixelFormat.RGBA_8888,2);
         reader.setOnImageAvailableListener(r->{
             Image image=null;
             try{
@@ -86,22 +88,32 @@ public class ScreenMagnifierService extends Service {
             super.onDraw(c);
             float cx=getWidth()/2f, cy=getHeight()/2f;
             if(latest!=null){
-                float sx=(float)latest.getWidth()/screenW, sy=(float)latest.getHeight()/screenH;
-                float screenX=(lp==null?screenW/2f:lp.x+cx)/Math.max(.01f,sx);
-                float screenY=(lp==null?screenH/2f:lp.y+cy)/Math.max(.01f,sy);
-                float srcW=latest.getWidth()*.22f, srcH=latest.getHeight()*.22f;
+                float sx=(float)latest.getWidth()/Math.max(1,screenW), sy=(float)latest.getHeight()/Math.max(1,screenH);
+                float screenX=(lp==null?screenW/2f:lp.x+cx)*sx;
+                float screenY=(lp==null?screenH/2f:lp.y+cy)*sy;
+                float srcW=latest.getWidth()/Math.max(1f,zoom); float srcH=latest.getHeight()/Math.max(1f,zoom);
                 RectF src=new RectF(screenX-srcW/2,screenY-srcH/2,screenX+srcW/2,screenY+srcH/2);
                 src.left=Math.max(0,src.left); src.top=Math.max(0,src.top); src.right=Math.min(latest.getWidth(),src.right); src.bottom=Math.min(latest.getHeight(),src.bottom);
                 Rect srcRect=new Rect(Math.round(src.left),Math.round(src.top),Math.round(src.right),Math.round(src.bottom));
                 c.drawBitmap(latest,srcRect,new RectF(0,0,getWidth(),getHeight()),paint);
             }else{paint.setColor(0xDDFFFFFF);c.drawCircle(cx,cy,cx-4,paint);}
             paint.setStyle(Paint.Style.STROKE); paint.setStrokeWidth(dp(4)); paint.setColor(0xFF35CD37); c.drawCircle(cx,cy,Math.min(cx,cy)-3,paint); paint.setStyle(Paint.Style.FILL);
+            paint.setColor(0xCCFFFFFF); c.drawRoundRect(8,8,78,42,10,10,paint); c.drawRoundRect(getWidth()-78,8,getWidth()-8,42,10,10,paint); c.drawRoundRect(getWidth()/2f-35,8,getWidth()/2f+35,42,10,10,paint);
+            paint.setColor(Color.DKGRAY); paint.setTextSize(dp(16)); paint.setTextAlign(Paint.Align.CENTER);
+            c.drawText("×",43,31,paint); c.drawText("+",getWidth()-43,31,paint); c.drawText("×2",getWidth()/2f,31,paint);
         }
         @Override public boolean onTouchEvent(android.view.MotionEvent e){
             switch(e.getAction()){
                 case MotionEvent.ACTION_DOWN: downX=e.getRawX();downY=e.getRawY();oldX=lp.x;oldY=lp.y;return true;
                 case MotionEvent.ACTION_MOVE: lp.x=oldX+(int)(e.getRawX()-downX);lp.y=oldY+(int)(e.getRawY()-downY);lp.x=Math.max(0,Math.min(screenW-getWidth(),lp.x));lp.y=Math.max(0,Math.min(screenH-getHeight(),lp.y));wm.updateViewLayout(this,lp);invalidate();return true;
-                case MotionEvent.ACTION_UP: if(Math.hypot(e.getRawX()-downX,e.getRawY()-downY)<18) stopSelf(); return true;
+                case MotionEvent.ACTION_UP:
+                    if(Math.hypot(e.getRawX()-downX,e.getRawY()-downY)<18){
+                        float x=e.getX(), y=e.getY();
+                        if(y<55 && x<90){ stopSelf(); return true; }
+                        if(y<55 && x>getWidth()-90){ zoom=Math.min(5f,zoom+0.5f); invalidate(); return true; }
+                        if(y<55 && x>getWidth()/2f-45 && x<getWidth()/2f+45){ zoom=2f; invalidate(); return true; }
+                    }
+                    return true;
             }
             return true;
         }

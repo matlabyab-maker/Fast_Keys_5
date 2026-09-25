@@ -47,7 +47,7 @@ public class FastKeysKeyboardView extends View {
     };
     private final int BG=Color.rgb(239,238,232), DEFAULT_KEY=Color.rgb(250,249,244),
             BLUE=Color.rgb(20,112,235), NAVY=Color.rgb(18,38,78), BLACK=Color.rgb(25,29,34),
-            GREEN=Color.rgb(45,205,55), ENTER_BG=Color.rgb(225,238,255), BACKSPACE_BG=Color.rgb(255,232,232), NUMBER_BG=Color.rgb(232,231,224), SPACE_BG=Color.rgb(255,232,120);
+            GREEN=Color.rgb(45,205,55), ENTER_BG=Color.rgb(225,238,255), BACKSPACE_BG=Color.rgb(255,232,232), NUMBER_BG=Color.rgb(232,231,224), SPACE_BG=Color.rgb(242,224,145);
     private boolean englishMode = false;
     private int KEY;
     private boolean nastaliqEnabled = false;
@@ -132,6 +132,7 @@ public class FastKeysKeyboardView extends View {
         Button emojiMaker = drawerButton("ساخت Emoji");
         Button nastaliq = drawerButton(nastaliqEnabled ? "فونت نستعلیق: روشن" : "فونت نستعلیق: خاموش");
         Button nastaliqKeyboard = drawerButton("کیبورد نستعلیق");
+        Button nastaliqBoard = drawerButton("تابلو نوشتاری نستعلیق");
         Button steering = drawerButton("فرمان ماشین");
         Button arabic = drawerButton("حرکت‌ها و صداهای عربی");
         Button history = drawerButton("تاریخچه کلیپ‌بورد (۱۰۰)");
@@ -140,7 +141,8 @@ public class FastKeysKeyboardView extends View {
         Button mouse = drawerButton("موس صفحه وب");
 
         Button recorder = drawerButton("ضبط صدای Fast Keys");
-        Button[] buttons={transparency,palette,emoji,emojiMaker,nastaliq,nastaliqKeyboard,steering,arabic,history,magnifierButton,resize,mouse,recorder};
+        Button quickSettings = drawerButton("Quick Settings");
+        Button[] buttons={transparency,palette,emoji,emojiMaker,nastaliq,nastaliqKeyboard,nastaliqBoard,steering,arabic,history,magnifierButton,resize,mouse,recorder,quickSettings};
         for(Button b:buttons) list.addView(b);
 
         final PopupWindow popup = new PopupWindow(panel,
@@ -164,6 +166,7 @@ public class FastKeysKeyboardView extends View {
             popup.dismiss(); invalidate();
         });
         nastaliqKeyboard.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showNastaliqKeyboard));
+        nastaliqBoard.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showNastaliqWritingBoard));
         steering.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showSteeringWheel));
         arabic.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showArabicHarakat));
         history.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showClipboardHistory));
@@ -174,6 +177,7 @@ public class FastKeysKeyboardView extends View {
         resize.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showResizeFloatInfo));
         mouse.setOnClickListener(v -> showAndKeepKeyboard(popup, this::showMouseControls));
         recorder.setOnClickListener(v -> { popup.dismiss(); service.toggleRecorder(); });
+        quickSettings.setOnClickListener(v -> { try { service.startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch(Exception ignored) {} });
 
         popup.showAtLocation(this, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, dp(6));
         drawerOpen = true;
@@ -244,9 +248,14 @@ public class FastKeysKeyboardView extends View {
         info.setTextSize(16);
         root.addView(info,new LinearLayout.LayoutParams(-1,110));
 
-        Button resize=new Button(service);
-        resize.setText("تغییر اندازه");
-        root.addView(resize);
+        SeekBar sizeBar=new SeekBar(service);
+        sizeBar.setMax(maxHeightDp-minHeightDp);
+        int currentSize=Math.max(minHeightDp,Math.min(maxHeightDp,savedKeyboardHeightDp()));
+        sizeBar.setProgress(currentSize-minHeightDp);
+        root.addView(sizeBar,new LinearLayout.LayoutParams(-1,60));
+        TextView sizeValue=new TextView(service); sizeValue.setText(currentSize+" dp"); sizeValue.setGravity(Gravity.CENTER); root.addView(sizeValue,new LinearLayout.LayoutParams(-1,42));
+        sizeBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onProgressChanged(SeekBar b,int progress,boolean fromUser){int v=minHeightDp+progress; sizeValue.setText(v+" dp"); applyKeyboardHeightDp(v);} public void onStartTrackingTouch(SeekBar b){} public void onStopTrackingTouch(SeekBar b){}});
+        Button resize=new Button(service); resize.setText("تغییر اندازه با کشیدن گوشه"); root.addView(resize);
 
         Button reset=new Button(service);
         reset.setText("Reset");
@@ -350,7 +359,12 @@ public class FastKeysKeyboardView extends View {
                 "😷","🤒","🤕","❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎",
                 "💔","❣️","💕","💞","💓","💗","💖","💘","💝","💟","👍","👎",
                 "👏","🙌","🙏","🤝","👌","✌️","🤞","🤟","🤘","🤙","👋","💪",
-                "🔥","⭐","✨","🎉","🎊","💯","✅","❌","⚡","🌹","🌸","🌺"
+                "🔥","⭐","✨","🎉","🎊","💯","✅","❌","⚡","🌹","🌸","🌺",
+                "🌻","🌼","🌷","🌱","🌿","🍀","☘️","🍁","🍂","🍃","🌞","🌝","🌚","🌙","🌟","💫","☀️","🌈","☁️","❄️","☃️","🌊",
+                "🍎","🍏","🍊","🍋","🍌","🍉","🍇","🍓","🫐","🍒","🍑","🍍","🥝","🥑","🍅","🥕","🌽","🍞","🧀","🍔","🍟","🍕","🌭","🍿","🍩","🍪",
+                "⚽","🏀","🏈","⚾","🎾","🏐","🎱","🏆","🥇","🥈","🥉","🚗","🚕","🚌","🚓","✈️","🚀","🚲","🛵","🚢",
+                "⌚","📱","💻","🖥️","⌨️","🖨️","📷","🎥","🎧","🎤","📚","✏️","📝","📌","📎","🔒","🔑","💡","🔔","⚙️","❤️‍🔥","💔","💖","💗","💓","💞","💕","💌","💋","👀","👁️","👂","👃","🧠","🫀","🫶","🤲","🙋","🙌","👏","🤝","💪","👊","✊","🤞","✌️","🤟","🤘","🤙","👌","👉","👈","☝️","👇","👆","✍️","💅","🙏",
+                "🙂","🙃","😉","😊","😇","🥰","😍","🤩","😘","😗","😙","😚","😋","😛","😜","🤪","🤨","🧐","🤓","😎","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗","🤔","🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕","🤠","🥸","😈","👿","👹","👺","💀","☠️","👻","👽","🤖","🎃","😺","😸","😹","😻","😼","😽","🙀","😿","😾"
         };
         LinearLayout root=new LinearLayout(service); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(8,8,8,8);
         TextView title=new TextView(service); title.setText("انتخاب Emoji"); title.setTextSize(20); title.setGravity(Gravity.CENTER); title.setTextColor(NAVY);
@@ -565,63 +579,42 @@ public class FastKeysKeyboardView extends View {
 
     private void showArabicHarakat() {
         final String[][] groups = {
-                {"َ","فتحه / صدای کوتاه a"},
-                {"ِ","کسره / صدای کوتاه i"},
-                {"ُ","ضمه / صدای کوتاه u"},
-                {"ْ","سکون"},
-                {"ّ","تشدید"},
-                {"ً","تنوین فتح"},
-                {"ٍ","تنوین کسر"},
-                {"ٌ","تنوین ضم"},
-                {"ٓ","مدّ"},
-                {"ٰ","الف خنجری"},
-                {"ٔ","همزه بالا"},
-                {"ٕ","همزه پایین"},
-                {"ٖ","نشان کوچک زیر"},
-                {"ٗ","نشان کوچک بالا"},
-                {"َا","صدای بلند آ / ا"},
-                {"ِی","صدای بلند ای / ی"},
-                {"ُو","صدای بلند او / و"},
-                {"ٱ","الف وصل"}
+                {"َ","فتحه — کوتاه a"},{"ِ","کسره — کوتاه i"},{"ُ","ضمه — کوتاه u"},{"ْ","سکون"},{"ّ","تشدید"},
+                {"ً","تنوین فتح"},{"ٍ","تنوین کسر"},{"ٌ","تنوین ضم"},{"ٓ","مدّ"},{"ٰ","الف خنجری"},{"ٔ","همزه بالا"},{"ٕ","همزه پایین"},
+                {"َا","بلند آ / ا"},{"ِی","بلند ای / ی"},{"ُو","بلند او / و"},{"آ","الف مدّی"},{"ٱ","الف وصل"},{"ء","همزه"},
+                {"أ","الف همزه بالا"},{"إ","الف همزه پایین"},{"ؤ","واو همزه"},{"ئ","ی همزه"},{"ـ","کشیده"},{"ٖ","نشان زیر"},{"ٗ","نشان بالا"}
         };
-
-        LinearLayout root = new LinearLayout(service);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(20, 10, 20, 10);
-
-        TextView title = new TextView(service);
-        title.setText("حرکت‌ها و صداهای عربی");
-        title.setTextSize(20);
-        title.setTextColor(BLACK);
-        title.setGravity(Gravity.CENTER);
-        root.addView(title, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 54));
-
-        GridLayout grid = new GridLayout(service);
-        grid.setColumnCount(3);
-        for (String[] item : groups) {
-            Button b = new Button(service);
-            b.setText(item[0] + "\n" + item[1]);
-            b.setTextSize(14);
-            b.setTextColor(NAVY);
-            b.setAllCaps(false);
-            final String mark = item[0];
-            b.setOnClickListener(v -> service.type(mark));
-            GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
-            lp.width = 0;
-            lp.height = 72;
-            lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-            lp.setMargins(3, 3, 3, 3);
-            grid.addView(b, lp);
+        LinearLayout root=new LinearLayout(service); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(14,8,14,8);
+        TextView title=new TextView(service); title.setText("حرکت‌ها و صداهای عربی — کوتاه و بلند"); title.setTextSize(19); title.setTextColor(BLACK); title.setGravity(Gravity.CENTER);
+        root.addView(title,new LinearLayout.LayoutParams(-1,54));
+        GridLayout grid=new GridLayout(service); grid.setColumnCount(3);
+        for(String[] item:groups){
+            Button b=new Button(service); b.setText(item[0]+"\n"+item[1]); b.setTextSize(14); b.setTextColor(NAVY); b.setAllCaps(false);
+            final String mark=item[0]; b.setOnClickListener(v->service.type(mark));
+            GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=72; lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(3,3,3,3); grid.addView(b,lp);
         }
-        root.addView(grid, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        root.addView(grid,new LinearLayout.LayoutParams(-1,0,1f));
+        Button close=drawerButton("بستن"); root.addView(close);
+        PopupWindow popup=new PopupWindow(root,Math.min(dp(400),Math.max(dp(310),getWidth()-dp(12))),Math.min(dp(620),Math.max(dp(400),getHeight()-dp(12))),false);
+        popup.setBackgroundDrawable(new ColorDrawable(Color.WHITE)); popup.setTouchable(true); popup.setFocusable(false); popup.setOutsideTouchable(true); popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED); popup.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING); popup.setElevation(10f);
+        close.setOnClickListener(v->popup.dismiss()); popup.showAtLocation(this,Gravity.CENTER,0,0);
+    }
 
-        AlertDialog dialog = new AlertDialog.Builder(service)
-                .setView(root)
-                .setNegativeButton("بستن", null)
-                .create();
-        dialog.show();
+    private void showNastaliqWritingBoard(){
+        final LinearLayout root=new LinearLayout(service); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(12,10,12,10);
+        TextView title=new TextView(service); title.setText("تابلو نوشتاری نستعلیق"); title.setTextSize(20); title.setTextColor(NAVY); title.setGravity(Gravity.CENTER); root.addView(title,new LinearLayout.LayoutParams(-1,52));
+        final TextView preview=new TextView(service); preview.setTypeface(nastaliqTypeface); preview.setTextSize(30); preview.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL); preview.setPadding(12,8,12,8); preview.setTextColor(NAVY); preview.setBackgroundColor(Color.rgb(248,246,238));
+        root.addView(preview,new LinearLayout.LayoutParams(-1,dp(100)));
+        final String[] chars={"ا","ب","پ","ت","ث","ج","چ","ح","خ","د","ذ","ر","ز","ژ","س","ش","ص","ض","ط","ظ","ع","غ","ف","ق","ک","گ","ل","م","ن","و","ه","ی","ئ","ء","،","؛","؟",". "," ","آ","أ","إ","ؤ"};
+        GridLayout grid=new GridLayout(service); grid.setColumnCount(8); ScrollView scroll=new ScrollView(service);
+        for(String ch:chars){ Button b=new Button(service); b.setText(ch.trim().isEmpty()?"Space":ch); b.setTextSize(20); b.setTypeface(nastaliqTypeface); b.setAllCaps(false); b.setOnClickListener(v->{ if(ch.equals(" ")) preview.append(" "); else preview.append(ch); }); GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=58; lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(2,2,2,2); grid.addView(b,lp); }
+        scroll.addView(grid); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
+        LinearLayout actions=new LinearLayout(service);
+        Button clear=drawerButton("پاک کردن"); clear.setOnClickListener(v->preview.setText(""));
+        Button insert=drawerButton("درج در متن"); insert.setOnClickListener(v->{String s=preview.getText().toString(); if(!s.isEmpty()) service.typeTo(service.getCurrentInputConnection(),s);});
+        Button close=drawerButton("بستن"); actions.addView(clear,new LinearLayout.LayoutParams(0,58,1f)); actions.addView(insert,new LinearLayout.LayoutParams(0,58,1f)); actions.addView(close,new LinearLayout.LayoutParams(0,58,1f)); root.addView(actions);
+        PopupWindow popup=new PopupWindow(root,Math.min(dp(430),Math.max(dp(320),getWidth()-dp(10))),Math.min(dp(650),Math.max(dp(450),getHeight()-dp(10))),false);
+        popup.setBackgroundDrawable(new ColorDrawable(Color.WHITE)); popup.setTouchable(true); popup.setFocusable(false); popup.setOutsideTouchable(true); popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED); popup.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING); popup.setElevation(10f); close.setOnClickListener(v->popup.dismiss()); popup.showAtLocation(this,Gravity.CENTER,0,0);
     }
 
     @Override protected void onDraw(Canvas c){
@@ -689,11 +682,11 @@ public class FastKeysKeyboardView extends View {
         y+=keyH+gap;
         drawArrow(c,0,y,keyH,keyH,"↓");
         float enterW = keyH + gap;
-        String[] r4=englishMode ? new String[]{"a","s","d","f","g","h","j","k","l",";","\""} : new String[]{"ش","س","ی","ب","ل","ت","ا","ک","گ","؛","»"};
+        String[] r4=englishMode ? (caps ? new String[]{"A","S","D","F","G","H","J","K","L",":","\""} : new String[]{"a","s","d","f","g","h","j","k","l",";","\""}) : new String[]{"ش","س","ی","ب","ل","ا","ت","ن","م","ک","گ"};
         rowFromRightReserved(c,y,keyH,r4,enterW);
 
         y+=keyH+gap;
-        String[] r5=englishMode ? new String[]{"z","x","c","v","b","n","m",",",".","/","?"} : new String[]{"،","ژ","ذ","ز","د","چ","پ","و","ن","م","/\n؟"};
+        String[] r5=englishMode ? (caps ? new String[]{"Z","X","C","V","B","N","M","<",">","?","?"} : new String[]{"z","x","c","v","b","n","m",",",".","/","?"}) : new String[]{"،","ژ","ذ","ز","ر","د","ئ","و",".","/","؟"};
         rowFromRightReservedWithEscape(c,y,keyH,r5,enterW);
         keyWithBackground(c,w-enterW,y-keyH-gap,w,y+keyH+gap,"Enter",NAVY,ENTER_BG,false);
 
@@ -727,7 +720,7 @@ public class FastKeysKeyboardView extends View {
         }
         x+=capsW+gap;
 
-        String[] letters=englishMode ? new String[]{"Q","W","E","R","T","Y","U","I","O","P","[\n{","]\n}","|\n\\"} : new String[]{"ض","ص","ث","ق","ف","غ","ع","ه","خ","ج","ح","ط","ظ"};
+        String[] letters=englishMode ? (caps ? new String[]{"Q","W","E","R","T","Y","U","I","O","P","[\n{","]\n}","|\n\\"} : new String[]{"q","w","e","r","t","y","u","i","o","p","[\n{","]\n}","|\n\\"}) : new String[]{"ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","چ","پ"};
         for(String s:letters){
             if(s.contains("\n")){
                 key(c,x,y,x+normalW,y+keyH,"",NAVY,false);
@@ -839,12 +832,8 @@ public class FastKeysKeyboardView extends View {
     private void drawPressGlow(Canvas c){
         float pad = Math.max(3f, keyH * .045f);
         p.setStyle(Paint.Style.FILL);
-        p.setColor(Color.argb(70, 255, 210, 0));
-        c.drawRoundRect(pressL-pad*1.8f, pressT-pad*1.8f, pressR+pad*1.8f, pressB+pad*1.8f, 10, 10, p);
-        p.setColor(Color.argb(145, 255, 190, 0));
-        c.drawRoundRect(pressL-pad, pressT-pad, pressR+pad, pressB+pad, 8, 8, p);
-        p.setColor(Color.argb(110, 255, 245, 120));
-        c.drawRoundRect(pressL, pressT, pressR, pressB, 7, 7, p);
+        p.setColor(Color.argb(170, 255, 190, 0));
+        c.drawRoundRect(pressL+1, pressT+1, pressR-1, pressB-1, 7, 7, p);
     }
 
     public void refreshSuggestions(){
@@ -1043,8 +1032,8 @@ public class FastKeysKeyboardView extends View {
             float x0=left+gap;
             if(x>=x0 && x<x0+capsW){ caps=!caps; invalidate(); return; }
             x0+=capsW+gap;
-            String[] normal=englishMode ? new String[]{"q","w","e","r","t","y","u","i","o","p","[","]","\\"} : new String[]{"ض","ص","ث","ق","ف","غ","ع","ه","خ","ج","ح","ط","ظ"};
-            String[] shifted=englishMode ? new String[]{"Q","W","E","R","T","Y","U","I","O","P","{","}","|"} : new String[]{"ض","ص","ث","ق","ف","غ","ع","ه","خ","ج","ح","ط","ظ"};
+            String[] normal=englishMode ? new String[]{"q","w","e","r","t","y","u","i","o","p","[","]","\\"} : new String[]{"ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","چ","پ"};
+            String[] shifted=englishMode ? new String[]{"Q","W","E","R","T","Y","U","I","O","P","{","}","|"} : new String[]{"ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","چ","پ"};
             for(int i=0;i<13;i++){
                 if(x>=x0 && x<x0+normalW){ service.type(caps ? shifted[i] : normal[i]); return; }
                 x0+=normalW+gap;
@@ -1058,9 +1047,9 @@ public class FastKeysKeyboardView extends View {
             if(row==4 && x<keyH){ service.move(KeyEvent.KEYCODE_DPAD_DOWN); return; }
             if(row==5 && x<keyH){ service.move(KeyEvent.KEYCODE_DPAD_UP); return; }
             String[] normal=englishMode ? (row==4?new String[]{"a","s","d","f","g","h","j","k","l",";","\""}:new String[]{"z","x","c","v","b","n","m",",",".","/","?"})
-                    : (row==4?new String[]{"ش","س","ی","ب","ل","ت","ا","ک","گ","؛","»"}:new String[]{"،","ژ","ذ","ز","د","چ","پ","و","ن","م","/"});
+                    : (row==4?new String[]{"ش","س","ی","ب","ل","ا","ت","ن","م","ک","گ"}:new String[]{"،","ژ","ذ","ز","ر","د","ئ","و",".","/","؟"});
             String[] shifted=englishMode ? (row==4?new String[]{"A","S","D","F","G","H","J","K","L",":","\""}:new String[]{"Z","X","C","V","B","N","M","<",">","?","?"})
-                    : (row==4?new String[]{"ش","س","ی","ب","ل","ت","ا","ک","گ",":",">"}:new String[]{"،","ژ","ذ","ز","د","چ","پ","و","ن","م","؟"});
+                    : (row==4?new String[]{"ش","س","ی","ب","ل","ا","ت","ن","م","ک","گ"}:new String[]{"،","ژ","ذ","ز","ر","د","ئ","و",".","/","؟"});
             float available=w-left-enterW-gap;
             float escW=keyH*.70f;
             if(row==5 && x>=left+gap && x<left+gap+escW){ service.escape(); return; }
@@ -1068,7 +1057,7 @@ public class FastKeysKeyboardView extends View {
             float cw=(remaining-gap*(normal.length+1))/normal.length;
             float x0=left+gap+escW+gap;
             for(int i=0;i<normal.length;i++){
-                if(x>=x0 && x<x0+cw){ service.type(caps ? shifted[i] : normal[i]); return; }
+                if(x>=x0 && x<x0+cw){ if(!englishMode && row==5 && i==0){ service.type("،"); return; } service.type(caps ? shifted[i] : normal[i]); return; }
                 x0+=cw+gap;
             }
             return;
@@ -1142,12 +1131,12 @@ public class FastKeysKeyboardView extends View {
     }
 
     private void showSymbolPicker(){
-        final String[] symbols={"!","@","#","$","%","^","&","*","(",")","-","_","=","+","[","]","{","}","\\","|",";",":",",","<",".",">","/","؟","«","»"};
+        final String[] symbols={"!","@","#","$","%","^","&","*","(",")","-","_","=","+","[","]","{","}","\\","|",";",":",",","<",".",">","/","؟","«","»","،","؛","٪","×","÷","±","≈","≠","≤","≥","∞","√","∑","π","µ","°","′","″","§","©","®","™","€","£","¥","₽","₹","$","¢","…","—","–","·","•","‰","※","†","‡","✓","✔","✕","✖","★","☆","♪","♫","♩","♥","♦","♣","♠","♂","♀","←","→","↑","↓","↔","↕","⇐","⇒","⇑","⇓","↗","↘","↙","↖","⌘","⌫","⌁","⌛","⚠","☑","☒","☀","☁","☂","☃","☄","☾","☽","♨","⚡","☕","☎","✉","✈","⚓","⚙","⚽","⚾","♟","♞","♜","♛","♚"};
         LinearLayout root=new LinearLayout(service); root.setOrientation(LinearLayout.VERTICAL); root.setPadding(10,10,10,10);
         TextView title=new TextView(service); title.setText("نمادها"); title.setTextSize(20); title.setGravity(Gravity.CENTER); title.setTextColor(NAVY);
         root.addView(title,new LinearLayout.LayoutParams(-1,dp(48)));
         ScrollView scroll=new ScrollView(service);
-        GridLayout grid=new GridLayout(service); grid.setColumnCount(5); grid.setPadding(4,4,4,4);
+        GridLayout grid=new GridLayout(service); grid.setColumnCount(6); grid.setPadding(4,4,4,4);
         for(String s:symbols){
             Button b=new Button(service); b.setText(s); b.setTextSize(20); b.setAllCaps(false); b.setTextColor(Color.RED);
             GridLayout.LayoutParams lp=new GridLayout.LayoutParams(); lp.width=0; lp.height=dp(58); lp.columnSpec=GridLayout.spec(GridLayout.UNDEFINED,1f); lp.setMargins(2,2,2,2); grid.addView(b,lp);
@@ -1155,7 +1144,7 @@ public class FastKeysKeyboardView extends View {
         }
         scroll.addView(grid,new ScrollView.LayoutParams(-1,-2)); root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1f));
         Button close=drawerButton("بستن"); root.addView(close);
-        final PopupWindow popup=new PopupWindow(root,Math.min(dp(360),Math.max(dp(300),getWidth()-dp(16))),Math.min(dp(520),Math.max(dp(320),getHeight()-dp(16))),false);
+        final PopupWindow popup=new PopupWindow(root,Math.min(dp(360),Math.max(dp(300),getWidth()-dp(16))),Math.min(dp(620),Math.max(dp(360),getHeight()-dp(16))),false);
         popup.setBackgroundDrawable(new ColorDrawable(Color.WHITE)); popup.setTouchable(true); popup.setFocusable(false); popup.setOutsideTouchable(true); popup.setInputMethodMode(PopupWindow.INPUT_METHOD_NOT_NEEDED); popup.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING); popup.setElevation(10f);
         close.setOnClickListener(v->popup.dismiss());
         popup.showAtLocation(this,Gravity.CENTER,0,0);

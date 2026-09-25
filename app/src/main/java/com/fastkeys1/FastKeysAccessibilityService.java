@@ -61,13 +61,14 @@ public class FastKeysAccessibilityService extends AccessibilityService {
     private boolean clickNodeAt(AccessibilityNodeInfo node, float x, float y){
         if(node==null) return false;
         try{
+            // Search children first so the smallest actual web button/link wins.
+            for(int i=node.getChildCount()-1;i>=0;i--){
+                if(clickNodeAt(node.getChild(i),x,y)) return true;
+            }
             android.graphics.Rect b=new android.graphics.Rect();
             node.getBoundsInScreen(b);
-            if(b.contains((int)x,(int)y)){
-                if(node.isClickable() && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true;
-                for(int i=0;i<node.getChildCount();i++){
-                    if(clickNodeAt(node.getChild(i),x,y)) return true;
-                }
+            if(b.contains((int)x,(int)y) && node.isVisibleToUser() && node.isClickable()){
+                return node.performAction(AccessibilityNodeInfo.ACTION_CLICK);
             }
         }catch(Exception ignored){}
         return false;
